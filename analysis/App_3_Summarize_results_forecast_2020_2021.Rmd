@@ -187,11 +187,23 @@ Here is our estimate of the total run size (i.e., catch + escapement) over time.
 
 ```{r fig_2_run_size, fig.width = 6, fig.height = 4.5, fig.pos = "placeHere", fig.align="center"}
 clr <- rgb(0, 0, 255, alpha = 50, maxColorValue = 255)
-## estimated spawner data for plotting
-p_dat <- mod_res_MA1_AR1[,grep("Sp", colnames(mod_res_MA1_AR1))]*model_weights[1] + mod_res_AR1[,grep("Sp", colnames(mod_res_AR1))]*model_weights[2]  
+## estimated terminal abundance forecast
+p_dat <- mod_res_MA1_AR1[,grep("Sp", colnames(mod_res_MA1_AR1))]*model_weights[1] + mod_res_AR1[,grep("Sp", colnames(mod_res_AR1))]*model_weights[2]
 
 p_dat <- apply(p_dat, 2, quantile, CI_vec)
 p_dat <- p_dat + matrix(dat_harv, length(CI_vec), n_yrs+n_fore, byrow = TRUE)
+
+
+# p_dat_AR1MA1 <- mod_res_MA1_AR1[,grep("Sp", colnames(mod_res_MA1_AR1))]
+# 
+# p_dat_AR1MA1 <- apply(p_dat_AR1MA1, 2, quantile, CI_vec)
+# p_dat_AR1MA1 <- p_dat_AR1MA1 + matrix(dat_harv, length(CI_vec), n_yrs+n_fore, byrow = TRUE)
+# 
+# p_dat_AR1 <- mod_res_AR1[,grep("Sp", colnames(mod_res_AR1))]
+# 
+# p_dat_AR1 <- apply(p_dat_AR1, 2, quantile, CI_vec)
+# p_dat_AR1 <- p_dat_AR1 + matrix(dat_harv, length(CI_vec), n_yrs+n_fore, byrow = TRUE)
+
 ## time seq
 t_idx_f <- seq(yr_frst, length.out = n_yrs+n_fore)
 ## plot
