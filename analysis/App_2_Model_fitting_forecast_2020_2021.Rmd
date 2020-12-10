@@ -57,6 +57,14 @@ if(!require("ggplot2")) {
   install.packages("ggplot2")
   library("ggplot2")
 }
+if(!require("coda")) {
+  install.packages("coda")
+  library("coda")
+}
+if(!require("shinystan")) {
+  install.packages("shinystan")
+  library("shinystan")
+}
 ## set directory locations
 datadir <- here("data")
 jagsdir <- here("jags")
@@ -802,6 +810,17 @@ gelman.diag(mod_fits[[2]][,par_conv])
 t(round(autocorr.diag(mod_fits[[2]][,par_conv],
                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
                       relative=FALSE), 2))
+## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
+fit_bh_cov_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_AR.rds"))
+fit_bh_cov_MA1_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_MA1_AR1.rds"))
+my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR1))
+summary_stats1<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso,what=x)))
+colnames(summary_stats1)[1:4]<-c("rhat","neff","mean","sd")
+write.csv(summary_stats1,file.path(savedir,"Summary_stats_AR.csv"),row.names = F)
+my_sso2 <- launch_shinystan(as.shinystan(fit_bh_cov_MA1_AR1))
+summary_stats2<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso2,what=x)))
+colnames(summary_stats2)[1:4]<-c("rhat","neff","mean","sd")
+write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"),row.names = F)
 ```
 
 
