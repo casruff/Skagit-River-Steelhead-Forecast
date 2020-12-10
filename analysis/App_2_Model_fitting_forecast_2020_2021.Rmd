@@ -816,11 +816,11 @@ fit_bh_cov_MA1_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_MA1_AR1.rds"))
 my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR1))
 summary_stats1<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso,what=x)))
 colnames(summary_stats1)[1:4]<-c("rhat","neff","mean","sd")
-write.csv(summary_stats1,file.path(savedir,"Summary_stats_AR.csv"),row.names = F)
+write.csv(summary_stats1,file.path(savedir,"Summary_stats_AR.csv"))
 my_sso2 <- launch_shinystan(as.shinystan(fit_bh_cov_MA1_AR1))
 summary_stats2<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso2,what=x)))
 colnames(summary_stats2)[1:4]<-c("rhat","neff","mean","sd")
-write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"),row.names = F)
+write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"))
 ```
 
 
