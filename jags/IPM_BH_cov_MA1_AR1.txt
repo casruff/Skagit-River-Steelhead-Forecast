@@ -17,14 +17,16 @@ model {
   for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
 
   ## AR(1) coef for recruitment residual
-  # phi ~ dunif(-0.999,0.999);
+  #phi ~ dunif(-0.999,0.999);
   #phi <- 0;
-  phi_prior ~ dbeta(2,2);
-  phi <- phi_prior*2-1;
+  #phi_prior ~ dbeta(2,2);
+  #phi <- phi_prior*2-1;
+  phi ~ dunif(0,0.999);
 
   ## MA(1) coef recruitment residual
-  theta_res_prior ~ dbeta(2,2);
-  theta_res <- theta_res_prior*2-1;
+  #theta_res_prior ~ dbeta(2,2);
+  #theta_res <- theta_res_prior*2-1;
+  theta_res ~ dunif(0,0.999);
 
   ## innovation in first year
   innov_1 ~ dnorm(0,tau_r*(1-phi*phi));
@@ -91,8 +93,8 @@ model {
     ## predicted recruits in BY t
     covar[t] <- inprod(gamma, mod_cvrs[t,]);
     ln_BH_a[t] <- mu_BH_a + covar[t]; 
-
-
+    
+    
     #=============================
     #version 1; fully non-centered
     #=============================
@@ -109,8 +111,7 @@ model {
     w[t] ~ dnorm(phi * w[t-1] + theta_res * res_ln_Rec[t-1], tau_r); 
     res_ln_Rec[t] <- w[t]-w[t-1];
 
-
-  	tot_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + w[t];
+    tot_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + w[t];
     ## median of total recruits
     tot_Rec[t] <- exp(tot_ln_Rec[t]);
     ## R/S

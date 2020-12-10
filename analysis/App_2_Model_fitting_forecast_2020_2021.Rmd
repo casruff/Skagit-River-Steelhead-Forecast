@@ -65,6 +65,10 @@ if(!require("shinystan")) {
   install.packages("shinystan")
   library("shinystan")
 }
+if(!require("R2jags")) {
+  install.packages("R2jags")
+  library("R2jags")
+}
 ## set directory locations
 datadir <- here("data")
 jagsdir <- here("jags")
@@ -93,6 +97,23 @@ fit_jags <- function(model, data, params, inits, ctrl, dir = jagsdir) {
                    quiet = TRUE)
   return(coda.samples(jm, params, ctrl$length, ctrl$thin))
 }
+
+#alternative wrapper to fit model in parallel; one chain per core
+fit_jags2<-function(model,data,params,inits,ctrl,dir=jagsdir){
+  jm<-jags.parallel(data=data, 
+                    inits=inits,
+                    parameters.to.save=params,
+                    model.file = file.path(jagsdir, model),
+                    n.chains = ctrl$chains, 
+                    n.iter = ctrl$iter, 
+                    n.burnin = ctrl$burn,
+                    n.thin = ctrl$thin,
+                    n.cluster= ctrl$chains, 
+                    DIC = TRUE,
+  )
+  return(as.mcmc.list(jm))
+}
+
 ```
 
 # User inputs
@@ -415,14 +436,16 @@ model {
   for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
 
   ## AR(1) coef for recruitment residual
-  # phi ~ dunif(-0.999,0.999);
+  #phi ~ dunif(-0.999,0.999);
   #phi <- 0;
-  phi_prior ~ dbeta(2,2);
-  phi <- phi_prior*2-1;
+  #phi_prior ~ dbeta(2,2);
+  #phi <- phi_prior*2-1;
+  phi ~ dunif(0,0.999);
 
   ## MA(1) coef recruitment residual
-  theta_res_prior ~ dbeta(2,2);
-  theta_res <- theta_res_prior*2-1;
+  #theta_res_prior ~ dbeta(2,2);
+  #theta_res <- theta_res_prior*2-1;
+  theta_res ~ dunif(0,0.999);
 
   ## innovation in first year
   innov_1 ~ dnorm(0,tau_r*(1-phi*phi));
@@ -696,7 +719,7 @@ par_jags <- c("alpha","E_BH_a","ln_BH_a",
               "gamma",
               "Sp","Rec","tot_ln_Rec","ln_RS",
               "pi_eta","pi_tau",
-              "sigma_r","sigma_s","res_ln_Rec","w","theta_res",
+              "sigma_r","sigma_s","res_ln_Rec","w","theta_res","phi",
               "lp_age","lp_esc"
               )
 
@@ -727,13 +750,19 @@ gelman.diag(mod_fits[[1]][,par_conv])
 t(round(autocorr.diag(mod_fits[[1]][,par_conv],
                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
                       relative=FALSE), 2))
+## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
+fit_bh_cov_MA1_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_MA1_AR1.rds"))
+my_sso2 <- launch_shinystan(as.shinystan(fit_bh_cov_MA1_AR1))
+summary_stats2<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso2,what=x)))
+colnames(summary_stats2)[1:4]<-c("rhat","neff","mean","sd")
+write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"))
 ```
 
 
 
 next we will fit a beverton holt model assuming AR1 errors only
 
-```{r fit_BH_cov_AR1_show, eval = FALSE, message = FALSE, warning = FALSE, cache = FALSE}
+```{r fit_BH_cov_AR1_show, eval=FALSE, message=FALSE, warning=FALSE, cache=FALSE}
 ## function for inits
 init_vals_cov <- function() {
   list(alpha = 5,
@@ -828,15 +857,10 @@ t(round(autocorr.diag(mod_fits[[2]][,par_conv],
                       relative=FALSE), 2))
 ## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
 fit_bh_cov_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_AR.rds"))
-fit_bh_cov_MA1_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_MA1_AR1.rds"))
 my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR1))
 summary_stats1<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso,what=x)))
 colnames(summary_stats1)[1:4]<-c("rhat","neff","mean","sd")
 write.csv(summary_stats1,file.path(savedir,"Summary_stats_AR.csv"))
-my_sso2 <- launch_shinystan(as.shinystan(fit_bh_cov_MA1_AR1))
-summary_stats2<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso2,what=x)))
-colnames(summary_stats2)[1:4]<-c("rhat","neff","mean","sd")
-write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"))
 ```
 
 
