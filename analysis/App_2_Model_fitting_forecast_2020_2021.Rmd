@@ -105,13 +105,12 @@ fit_jags2<-function(model,data,params,inits,ctrl,dir=jagsdir){
                     parameters.to.save=params,
                     model.file = file.path(jagsdir, model),
                     n.chains = ctrl$chains, 
-                    n.iter = ctrl$iter, 
+                    n.iter = ctrl$length, 
                     n.burnin = ctrl$burn,
                     n.thin = ctrl$thin,
-                    n.cluster= ctrl$chains, 
                     DIC = TRUE,
   )
-  return(as.mcmc.list(jm))
+  return(as.mcmc.list(as.mcmc(jm)))
 }
 
 ```
@@ -632,8 +631,8 @@ dat_jags <- list(dat_age = dat_age,
 ## 2. MCMC control params
 mcmc_ctrl <- list(
   chains = 4,
-  length = 5e5,
-  burn = 2e5,
+  length = ,5e5,
+  burn = ,2e5,
   thin = 400
 )
 ## total number of MCMC samples after burnin
@@ -691,8 +690,14 @@ cat("Count =", 1, "; Time =", round(((proc.time()-timer_start)/60)["elapsed"], 1
           file="cnt_time.txt", append=TRUE)
 
 ## fit model & save it
-mod_fits[[1]] <- fit_jags("IPM_BH_cov_MA1_AR1.txt", dat_jags, par_jags,
-                          init_vals_cov, mcmc_ctrl)
+# mod_fits[[1]] <- fit_jags("IPM_BH_cov_MA1_AR1.txt", dat_jags, par_jags,
+#                           init_vals_cov, mcmc_ctrl)
+mod_fits[[1]] <- fit_jags2(model="IPM_BH_cov_MA1_AR1.txt",
+                           data=dat_jags,
+                           params=par_jags,
+                           inits=init_vals_cov,
+                           ctrl=mcmc_ctrl
+                           )
 ```
 
 ```{r fit_BH_cov_MA1_AR1, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, eval=TRUE}
@@ -730,8 +735,14 @@ cat("Count =", 1, "; Time =", round(((proc.time()-timer_start)/60)["elapsed"], 1
 if(file.exists(file.path(savedir, "fit_bh_cov_MA1_AR1.rds"))) {
   mod_fits[[1]] <- readRDS(file.path(savedir, "fit_bh_cov_MA1_AR1.rds"))
 } else { ## else, fit & save
-  mod_fits[[1]] <- fit_jags("IPM_BH_cov_MA1_AR1.txt", dat_jags, par_jags,
-                            init_vals_cov, mcmc_ctrl)
+  # mod_fits[[1]] <- fit_jags("IPM_BH_cov_MA1_AR1.txt", dat_jags, par_jags,
+  #                           init_vals_cov, mcmc_ctrl)
+  mod_fits[[1]] <- fit_jags2(model="IPM_BH_cov_MA1_AR1.txt",
+                           data=dat_jags,
+                           params=par_jags,
+                           inits=init_vals_cov,
+                           ctrl=mcmc_ctrl
+                           )
   saveRDS(mod_fits[[1]], file.path(savedir, "fit_bh_cov_MA1_AR1.rds"))
 }
 ```
@@ -794,8 +805,14 @@ cat("Count =", 2, "; Time =", round(((proc.time()-timer_start)/60)["elapsed"], 1
           file="cnt_time.txt", append=TRUE)
 
 ## fit model & save it
-mod_fits[[2]] <- fit_jags("IPM_BH_cov_AR.txt", dat_jags, par_jags,
-                          init_vals_cov, mcmc_ctrl)
+# mod_fits[[2]] <- fit_jags("IPM_BH_cov_AR.txt", dat_jags, par_jags,
+#                           init_vals_cov, mcmc_ctrl)
+mod_fits[[2]] <- fit_jags2(model="IPM_BH_cov_AR.txt",
+                           data=dat_jags,
+                           params=par_jags,
+                           inits=init_vals_cov,
+                           ctrl=mcmc_ctrl
+                           )
 ```
 
 
@@ -834,8 +851,14 @@ cat("Count =", 2, "; Time =", round(((proc.time()-timer_start)/60)["elapsed"], 1
 if(file.exists(file.path(savedir, "fit_bh_cov_AR.rds"))) {
   mod_fits[[2]] <- readRDS(file.path(savedir, "fit_bh_cov_AR.rds"))
 } else { ## else, fit & save
-  mod_fits[[2]] <- fit_jags("IPM_BH_cov_AR.txt", dat_jags, par_jags,
-                            init_vals_cov, mcmc_ctrl)
+  # mod_fits[[2]] <- fit_jags("IPM_BH_cov_AR.txt", dat_jags, par_jags,
+  #                           init_vals_cov, mcmc_ctrl)
+  mod_fits[[2]] <- fit_jags2(model="IPM_BH_cov_AR.txt",
+                           data=dat_jags,
+                           params=par_jags,
+                           inits=init_vals_cov,
+                           ctrl=mcmc_ctrl
+                           )
   saveRDS(mod_fits[[2]], file.path(savedir, "fit_bh_cov_AR.rds"))
 }
 ```
