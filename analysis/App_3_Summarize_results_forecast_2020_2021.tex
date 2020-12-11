@@ -118,7 +118,7 @@
 }
 \vspace{0.2in}
 
-This is version 0.20.12.07.
+This is version 0.20.12.09.
 
 \hypertarget{background}{%
 \section{Background}\label{background}}
@@ -276,10 +276,10 @@ etc.
 \begin{verbatim}
 ##   model   error elpd_diff se_diff elpd_loo se_elpd_loo  p_loo se_p_loo  looic se_looic
 ## 2   B-H     AR1      0.00    0.00  -401.95       49.27 146.41    11.48 803.90    98.54
-## 1   B-H MA1_AR1     -4.94    4.18  -406.89       49.69 145.41    13.80 813.77    99.38
+## 1   B-H MA1_AR1    -16.07   10.16  -418.02       51.57 161.98    18.23 836.04   103.15
 ##   pseudo_bma_weight
-## 2        0.91033119
-## 1        0.08966881
+## 2       0.992673609
+## 1       0.007326391
 \end{verbatim}
 
 \hypertarget{total-population-size}{%
@@ -293,11 +293,23 @@ Note that the y-axis is on a log scale.
 \begin{Shaded}
 \begin{Highlighting}[]
 \NormalTok{clr <-}\StringTok{ }\KeywordTok{rgb}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{255}\NormalTok{, }\DataTypeTok{alpha =} \DecValTok{50}\NormalTok{, }\DataTypeTok{maxColorValue =} \DecValTok{255}\NormalTok{)}
-\CommentTok{## estimated spawner data for plotting}
-\NormalTok{p_dat <-}\StringTok{ }\NormalTok{mod_res_MA1_AR1[,}\KeywordTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\KeywordTok{colnames}\NormalTok{(mod_res_MA1_AR1))]}\OperatorTok{*}\NormalTok{model_weights[}\DecValTok{1}\NormalTok{] }\OperatorTok{+}\StringTok{ }\NormalTok{mod_res_AR1[,}\KeywordTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\KeywordTok{colnames}\NormalTok{(mod_res_AR1))]}\OperatorTok{*}\NormalTok{model_weights[}\DecValTok{2}\NormalTok{]  }
+\CommentTok{## estimated terminal abundance forecast}
+\NormalTok{p_dat <-}\StringTok{ }\NormalTok{mod_res_MA1_AR1[,}\KeywordTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\KeywordTok{colnames}\NormalTok{(mod_res_MA1_AR1))]}\OperatorTok{*}\NormalTok{model_weights[}\DecValTok{1}\NormalTok{] }\OperatorTok{+}\StringTok{ }\NormalTok{mod_res_AR1[,}\KeywordTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\KeywordTok{colnames}\NormalTok{(mod_res_AR1))]}\OperatorTok{*}\NormalTok{model_weights[}\DecValTok{2}\NormalTok{]}
 
 \NormalTok{p_dat <-}\StringTok{ }\KeywordTok{apply}\NormalTok{(p_dat, }\DecValTok{2}\NormalTok{, quantile, CI_vec)}
 \NormalTok{p_dat <-}\StringTok{ }\NormalTok{p_dat }\OperatorTok{+}\StringTok{ }\KeywordTok{matrix}\NormalTok{(dat_harv, }\KeywordTok{length}\NormalTok{(CI_vec), n_yrs}\OperatorTok{+}\NormalTok{n_fore, }\DataTypeTok{byrow =} \OtherTok{TRUE}\NormalTok{)}
+
+
+\CommentTok{# p_dat_AR1MA1 <- mod_res_MA1_AR1[,grep("Sp", colnames(mod_res_MA1_AR1))]}
+\CommentTok{# }
+\CommentTok{# p_dat_AR1MA1 <- apply(p_dat_AR1MA1, 2, quantile, CI_vec)}
+\CommentTok{# p_dat_AR1MA1 <- p_dat_AR1MA1 + matrix(dat_harv, length(CI_vec), n_yrs+n_fore, byrow = TRUE)}
+\CommentTok{# }
+\CommentTok{# p_dat_AR1 <- mod_res_AR1[,grep("Sp", colnames(mod_res_AR1))]}
+\CommentTok{# }
+\CommentTok{# p_dat_AR1 <- apply(p_dat_AR1, 2, quantile, CI_vec)}
+\CommentTok{# p_dat_AR1 <- p_dat_AR1 + matrix(dat_harv, length(CI_vec), n_yrs+n_fore, byrow = TRUE)}
+
 \CommentTok{## time seq}
 \NormalTok{t_idx_f <-}\StringTok{ }\KeywordTok{seq}\NormalTok{(yr_frst, }\DataTypeTok{length.out =}\NormalTok{ n_yrs}\OperatorTok{+}\NormalTok{n_fore)}
 \CommentTok{## plot}
@@ -340,11 +352,11 @@ size (i.e., catch + escapement).
 
 \begin{verbatim}
 ##       forecast
-## 2.5%      2758
-## 25%       3711
-## 50%       4769
-## 75%       6731
-## 97.5%     8497
+## 2.5%      2846
+## 25%       3859
+## 50%       4985
+## 75%       7101
+## 97.5%     9005
 \end{verbatim}
 
 \hypertarget{spawner-recruit-relationship}{%
@@ -511,7 +523,7 @@ Here are summaries of the posterior distributions for \(\alpha\) and
 
 \begin{verbatim}
 ##  2.5%   50% 97.5% 
-##  1.55  5.36 38.98
+##  1.35  4.78 41.59
 \end{verbatim}
 
 \begin{Shaded}
@@ -523,7 +535,7 @@ Here are summaries of the posterior distributions for \(\alpha\) and
 
 \begin{verbatim}
 ##  2.5%   50% 97.5% 
-##  5.28  6.90  9.59
+##  5.23  7.00 10.42
 \end{verbatim}
 
 \hypertarget{covariate-effects}{%
@@ -601,10 +613,10 @@ Here is a summary of the covariate effect sizes
 \end{Shaded}
 
 \begin{verbatim}
-##           2.5%    5%   50%   95% 97.5%
-## gamma[1] -0.22 -0.20 -0.10 -0.01  0.01
-## gamma[2] -0.13 -0.12 -0.01  0.09  0.11
-## gamma[3]  0.00  0.03  0.18  0.33  0.36
+##           2.5%    5%   50%  95% 97.5%
+## gamma[1] -0.23 -0.21 -0.10 0.00  0.02
+## gamma[2] -0.15 -0.13 -0.01 0.10  0.12
+## gamma[3] -0.01  0.02  0.19 0.35  0.38
 \end{verbatim}
 
 \hypertarget{process-errors}{%
