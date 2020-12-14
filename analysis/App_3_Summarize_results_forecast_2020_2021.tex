@@ -118,7 +118,7 @@
 }
 \vspace{0.2in}
 
-This is version 0.20.12.10.
+This is version 0.20.12.14.
 
 \hypertarget{background}{%
 \section{Background}\label{background}}
@@ -262,6 +262,7 @@ etc.
 \CommentTok{## compute pseudo weights}
 \NormalTok{model_weights <-}\StringTok{ }\KeywordTok{loo_model_weights}\NormalTok{(LOOIC, }\DataTypeTok{method =} \StringTok{"pseudobma"}\NormalTok{,}\DataTypeTok{optim_method =} \StringTok{"BFGS"}\NormalTok{, }\DataTypeTok{optim_control =} \KeywordTok{list}\NormalTok{(), }\DataTypeTok{BB =} \OtherTok{TRUE}\NormalTok{)}
 
+
 \CommentTok{## extract median 2020 forecast from each model}
 \NormalTok{p_dat_AR1MA1 <-}\StringTok{ }\NormalTok{mod_res_MA1_AR1[,}\KeywordTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\KeywordTok{colnames}\NormalTok{(mod_res_MA1_AR1))]}
  
@@ -279,8 +280,8 @@ etc.
 \NormalTok{tbl_LOOIC <-}\StringTok{ }\NormalTok{tbl_LOOIC[}\KeywordTok{order}\NormalTok{(}\KeywordTok{as.numeric}\NormalTok{(}\KeywordTok{rownames}\NormalTok{(tbl_LOOIC))), ]}
 \NormalTok{tbl_LOOIC <-}\StringTok{ }\KeywordTok{cbind}\NormalTok{(}\DataTypeTok{model =} \KeywordTok{c}\NormalTok{(}\StringTok{"B-H"}\NormalTok{,}\StringTok{"B-H"}\NormalTok{),}
                    \DataTypeTok{error =} \KeywordTok{c}\NormalTok{(}\StringTok{"MA1_AR1"}\NormalTok{,}\StringTok{"AR1"}\NormalTok{),}
-                   \KeywordTok{as.data.frame}\NormalTok{(tbl_LOOIC),}\DataTypeTok{pseudo_bma_weight =} \KeywordTok{as.matrix}\NormalTok{(model_weights),}\DataTypeTok{forecast_2020 =} \KeywordTok{c}\NormalTok{(p_dat_AR1MA1_}\DecValTok{2020}\NormalTok{[}\DecValTok{2}\NormalTok{],p_dat_AR1_}\DecValTok{2020}\NormalTok{[}\DecValTok{2}\NormalTok{]))}
-\NormalTok{tbl_LOOIC[}\KeywordTok{order}\NormalTok{(tbl_LOOIC[,}\StringTok{"looic"}\NormalTok{]),]}
+                   \KeywordTok{as.data.frame}\NormalTok{(tbl_LOOIC),}\DataTypeTok{pseudo_bma_weight =} \KeywordTok{as.matrix}\NormalTok{(model_weights),}\DataTypeTok{forecast =} \KeywordTok{c}\NormalTok{(p_dat_AR1MA1_}\DecValTok{2020}\NormalTok{[}\DecValTok{2}\NormalTok{],p_dat_AR1_}\DecValTok{2020}\NormalTok{[}\DecValTok{2}\NormalTok{]))}
+\NormalTok{tbl_LOOIC[}\KeywordTok{order}\NormalTok{(tbl_LOOIC[,}\StringTok{"looic"}\NormalTok{]), ]}
 \end{Highlighting}
 \end{Shaded}
 
@@ -288,14 +289,14 @@ etc.
 ##   model   error elpd_diff se_diff elpd_loo se_elpd_loo  p_loo se_p_loo  looic se_looic
 ## 2   B-H     AR1      0.00    0.00  -401.95       49.27 146.41    11.48 803.90    98.54
 ## 1   B-H MA1_AR1    -16.07   10.16  -418.02       51.57 161.98    18.23 836.04   103.15
-##   pseudo_bma_weight forecast_2020
-## 2       0.993029662          4999
-## 1       0.006970338          2295
+##   pseudo_bma_weight forecast
+## 2       0.994444204     4999
+## 1       0.005555796     2295
 \end{verbatim}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\KeywordTok{write.csv}\NormalTok{(tbl_LOOIC,}\KeywordTok{file.path}\NormalTok{(savedir,}\StringTok{"Model_summary_table.csv"}\NormalTok{))}
+\KeywordTok{write.csv}\NormalTok{(tbl_LOOIC,}\KeywordTok{file.path}\NormalTok{(savedir,}\StringTok{"model_selection_results.csv"}\NormalTok{))}
 \end{Highlighting}
 \end{Shaded}
 
@@ -315,9 +316,6 @@ Note that the y-axis is on a log scale.
 
 \NormalTok{p_dat <-}\StringTok{ }\KeywordTok{apply}\NormalTok{(p_dat, }\DecValTok{2}\NormalTok{, quantile, CI_vec)}
 \NormalTok{p_dat <-}\StringTok{ }\NormalTok{p_dat }\OperatorTok{+}\StringTok{ }\KeywordTok{matrix}\NormalTok{(dat_harv, }\KeywordTok{length}\NormalTok{(CI_vec), n_yrs}\OperatorTok{+}\NormalTok{n_fore, }\DataTypeTok{byrow =} \OtherTok{TRUE}\NormalTok{)}
-
-
-
 
 \CommentTok{## time seq}
 \NormalTok{t_idx_f <-}\StringTok{ }\KeywordTok{seq}\NormalTok{(yr_frst, }\DataTypeTok{length.out =}\NormalTok{ n_yrs}\OperatorTok{+}\NormalTok{n_fore)}
@@ -355,17 +353,19 @@ size (i.e., catch + escapement).
 \begin{Shaded}
 \begin{Highlighting}[]
 \NormalTok{p_dat <-}\StringTok{ }\NormalTok{mod_res_MA1_AR1[,}\KeywordTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\KeywordTok{colnames}\NormalTok{(mod_res_MA1_AR1))]}\OperatorTok{*}\NormalTok{model_weights[}\DecValTok{1}\NormalTok{] }\OperatorTok{+}\StringTok{ }\NormalTok{mod_res_AR1[,}\KeywordTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\KeywordTok{colnames}\NormalTok{(mod_res_AR1))]}\OperatorTok{*}\NormalTok{model_weights[}\DecValTok{2}\NormalTok{]}
-\KeywordTok{data.frame}\NormalTok{(}\DataTypeTok{forecast=}\KeywordTok{round}\NormalTok{(}\KeywordTok{quantile}\NormalTok{(p_dat[,n_yrs}\OperatorTok{+}\NormalTok{n_fore],                                   }\DataTypeTok{probs=}\KeywordTok{c}\NormalTok{(}\FloatTok{0.025}\NormalTok{,}\FloatTok{0.25}\NormalTok{,}\FloatTok{0.5}\NormalTok{,}\FloatTok{0.75}\NormalTok{,}\FloatTok{0.975}\NormalTok{))))}
+
+\KeywordTok{data.frame}\NormalTok{(}\DataTypeTok{forecast=}\KeywordTok{round}\NormalTok{(}\KeywordTok{quantile}\NormalTok{(p_dat[,n_yrs}\OperatorTok{+}\NormalTok{n_fore],}
+                                   \DataTypeTok{probs=}\KeywordTok{c}\NormalTok{(}\FloatTok{0.025}\NormalTok{,}\FloatTok{0.25}\NormalTok{,}\FloatTok{0.5}\NormalTok{,}\FloatTok{0.75}\NormalTok{,}\FloatTok{0.975}\NormalTok{))))}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
 ##       forecast
-## 2.5%      2734
-## 25%       4045
-## 50%       4985
-## 75%       6179
-## 97.5%     9219
+## 2.5%      2735
+## 25%       4047
+## 50%       4990
+## 75%       6183
+## 97.5%     9228
 \end{verbatim}
 
 \hypertarget{spawner-recruit-relationship}{%
@@ -532,7 +532,7 @@ Here are summaries of the posterior distributions for \(\alpha\) and
 
 \begin{verbatim}
 ##  2.5%   50% 97.5% 
-##  1.35  4.78 41.60
+##  1.34  4.76 41.66
 \end{verbatim}
 
 \begin{Shaded}
@@ -544,7 +544,7 @@ Here are summaries of the posterior distributions for \(\alpha\) and
 
 \begin{verbatim}
 ##  2.5%   50% 97.5% 
-##  5.23  7.00 10.43
+##  5.20  6.99 10.47
 \end{verbatim}
 
 \hypertarget{covariate-effects}{%
