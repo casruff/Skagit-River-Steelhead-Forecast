@@ -171,6 +171,7 @@ for(i in 1:n_mods) {
 ## compute pseudo weights
 model_weights <- loo_model_weights(LOOIC, method = "pseudobma",optim_method = "BFGS", optim_control = list(), BB = TRUE)
 
+<<<<<<< Updated upstream
 ## forecasts
 
 p_dat_MA1_Ar1 <- mod_res_MA1_AR1[,grep("Sp", colnames(mod_res_MA1_AR1))]
@@ -180,6 +181,17 @@ p_dat_MA1_Ar1 <- round(quantile(p_dat_MA1_Ar1[,n_yrs+n_fore],
 p_dat_Ar1 <- mod_res_AR1[,grep("Sp", colnames(mod_res_AR1))]
 p_dat_Ar1 <- round(quantile(p_dat_Ar1[,n_yrs+n_fore],
                                    probs=c(0.025,0.25,0.5,0.75,0.975)))
+=======
+## extract median 2020 forecast from each model
+p_dat_AR1MA1 <- mod_res_MA1_AR1[,grep("Sp", colnames(mod_res_MA1_AR1))]
+ 
+p_dat_AR1MA1 <- apply(p_dat_AR1MA1, 2, quantile, CI_vec)
+p_dat_AR1MA1_2020 <- round(quantile(p_dat_AR1MA1[,n_yrs+n_fore],probs = CI_vec))
+
+
+p_dat_AR1 <- mod_res_AR1[,grep("Sp", colnames(mod_res_AR1))]
+p_dat_AR1_2020 <- round(quantile(p_dat_AR1[,n_yrs+n_fore],probs = CI_vec))
+>>>>>>> Stashed changes
 
 
 ## LOOIC for all data
@@ -188,9 +200,17 @@ rownames(tbl_LOOIC) <- sub("model", "", rownames(tbl_LOOIC))
 tbl_LOOIC <- tbl_LOOIC[order(as.numeric(rownames(tbl_LOOIC))), ]
 tbl_LOOIC <- cbind(model = c("B-H","B-H"),
                    error = c("MA1_AR1","AR1"),
+<<<<<<< Updated upstream
                    as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights),forecast = c(p_dat_MA1_Ar1[3],p_dat_Ar1[3]))
 tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
 write.csv(tbl_LOOIC,file.path(savedir,"model_selection_results.csv"))
+=======
+                   as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights),forecast_2020 = c(p_dat_AR1MA1_2020[2],p_dat_AR1_2020[2]))
+tbl_LOOIC[order(tbl_LOOIC[,"looic"]),]
+
+write.csv(tbl_LOOIC,file.path(savedir,"Model_summary_table.csv"))
+
+>>>>>>> Stashed changes
 ```
 
 ## Total population size
@@ -206,15 +226,7 @@ p_dat <- apply(p_dat, 2, quantile, CI_vec)
 p_dat <- p_dat + matrix(dat_harv, length(CI_vec), n_yrs+n_fore, byrow = TRUE)
 
 
-# p_dat_AR1MA1 <- mod_res_MA1_AR1[,grep("Sp", colnames(mod_res_MA1_AR1))]
-# 
-# p_dat_AR1MA1 <- apply(p_dat_AR1MA1, 2, quantile, CI_vec)
-# p_dat_AR1MA1 <- p_dat_AR1MA1 + matrix(dat_harv, length(CI_vec), n_yrs+n_fore, byrow = TRUE)
-# 
-# p_dat_AR1 <- mod_res_AR1[,grep("Sp", colnames(mod_res_AR1))]
-# 
-# p_dat_AR1 <- apply(p_dat_AR1, 2, quantile, CI_vec)
-# p_dat_AR1 <- p_dat_AR1 + matrix(dat_harv, length(CI_vec), n_yrs+n_fore, byrow = TRUE)
+
 
 ## time seq
 t_idx_f <- seq(yr_frst, length.out = n_yrs+n_fore)
@@ -247,9 +259,13 @@ Here are several percentiles for the 2021 forecast for the total run size (i.e.,
 
 ```{r forecast_2021}
 p_dat <- mod_res_MA1_AR1[,grep("Sp", colnames(mod_res_MA1_AR1))]*model_weights[1] + mod_res_AR1[,grep("Sp", colnames(mod_res_AR1))]*model_weights[2]
+<<<<<<< Updated upstream
 
 data.frame(forecast=round(quantile(p_dat[,n_yrs+n_fore],
                                    probs=c(0.025,0.25,0.5,0.75,0.975))))
+=======
+data.frame(forecast=round(quantile(p_dat[,n_yrs+n_fore],                                   probs=c(0.025,0.25,0.5,0.75,0.975))))
+>>>>>>> Stashed changes
 ```
 
 
