@@ -975,10 +975,10 @@ gelman.diag(mod_fits[[1]][,par_conv])
 #                       relative=FALSE), 2))
 ## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
 fit_bh_cov_MA1_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_MA1_AR1.rds"))
-# my_sso2 <- launch_shinystan(as.shinystan(fit_bh_cov_MA1_AR1))
-# summary_stats2<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso2,what=x)))
-# colnames(summary_stats2)[1:4]<-c("rhat","neff","mean","sd")
-# write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"))
+my_sso2 <- launch_shinystan(as.shinystan(fit_bh_cov_MA1_AR1))
+summary_stats2<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso2,what=x)))
+colnames(summary_stats2)[1:4]<-c("rhat","neff","mean","sd")
+write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"))
 ```
 
 
@@ -1257,7 +1257,104 @@ best_fit <- mod_fits[[best_i]]
 These results show that the `r mod_names[best_i,"mod"]` model with `r mod_names[best_i,"error"]` error has the lowest LOOIC value.  All results will be derived from model averaging based on pseudo bayesian model average weights. 
 
 
+# Model Selection Via Approximate leave-future-out cross validation
+Description here
 
+```{r }
+
+m=1
+N <- 43
+L <- 20
+k_thres <- 0.7
+approx_elpds_1sap <- rep(NA, N)
+
+# more stable than log(sum(exp(x))) 
+log_sum_exp <- function(x) {
+  max_x <- max(x)
+  max_x + log(sum(exp(x - max_x)))
+}
+
+# more stable than log(mean(exp(x)))
+log_mean_exp <- function(x) {
+  log_sum_exp(x) - log(length(x))
+}
+
+# compute log of raw importance ratios
+# sums over observations *not* over posterior samples
+sum_log_ratios <- function(loglik, ids = NULL) {
+  if (!is.null(ids)) loglik <- loglik[, ids, drop = FALSE]
+  rowSums(loglik)
+}
+
+# for printing comparisons later
+rbind_print <- function(...) {
+  round(rbind(...), digits = 2)
+}
+
+#extract pontwise log likelihoods
+tmp_lp <- as.matrix(mod_fits[[m]])
+## extract pointwise likelihoods
+tmp_lp <- tmp_lp[,grepl("lp_", colnames(tmp_lp))]
+## if numerical underflows, convert -Inf to 5% less than min(likelihood)
+if(any(is.infinite(tmp_lp))) {
+  tmp_lp[is.infinite(tmp_lp)] <- NA
+  tmp_min <- min(tmp_lp, na.rm = TRUE)
+  tmp_lp[is.na(tmp_lp)] <- tmp_min * 1.05
+}
+
+tmp_lp<-tmp_lp[,grepl("esc", colnames(tmp_lp))]
+#get yrs assoc
+names_loglik<-data.frame(strsplit(colnames(tmp_lp),"\\[|\\]"))
+yrnames<-as.numeric(names_loglik[2,])
+
+loglik <- matrix(NA,ncol=N,nrow=dim(tmp_lp)[1])
+for(i in 1:N){
+  if(!is.null(ncol(tmp_lp[,yrnames==i]))){
+    loglik[,i] = apply(tmp_lp[,yrnames==i],1,sum)
+  }else(loglik[,i] = tmp_lp[,yrnames==i])
+}
+
+# initialize the process for i = L
+past <- 1:L
+oos <- L + 1
+# df_past <- df[past, , drop = FALSE]
+# df_oos <- df[c(past, oos), , drop = FALSE]
+# fit_past <- update(fit, newdata = df_past, recompile = FALSE)
+#loglik <- log_lik(fit_past, newdata = df_oos, oos = oos)
+approx_elpds_1sap[L + 1] <- log_mean_exp(loglik[, oos])
+
+# iterate over i > L
+i_refit <- L
+refits <- L
+ks <- NULL
+for (i in (L + 1):(N - 1)) {
+  past <- 1:i
+  oos <- i + 1
+  # df_past <- df[past, , drop = FALSE]
+  # df_oos <- df[c(past, oos), , drop = FALSE]
+  # loglik <- log_lik(fit_past, newdata = df_oos, oos = oos)
+
+  logratio <- sum_log_ratios(loglik, (i_refit + 1):i)
+  psis_obj <- suppressWarnings(psis(logratio))
+  k <- pareto_k_values(psis_obj)
+  ks <- c(ks, k)
+  # if (k > k_thres) {
+  #   # refit the model based on the first i observations
+  #   i_refit <- i
+  #   refits <- c(refits, i)
+  #   fit_past <- update(fit_past, newdata = df_past, recompile = FALSE)
+  #   loglik <- log_lik(fit_past, newdata = df_oos, oos = oos)
+  #   approx_elpds_1sap[i + 1] <- log_mean_exp(loglik[, oos])
+  # } else {
+    lw <- weights(psis_obj, normalize = TRUE)[, 1]
+    approx_elpds_1sap[i + 1] <- log_sum_exp(lw + loglik[, oos])
+  #}
+}
+
+approx_elpd_1sap <- sum(approx_elpds_1sap, na.rm = TRUE)
+print(paste("approx LFO =" ,approx_elpd_1sap))
+print(ks)
+```
 
 
 
