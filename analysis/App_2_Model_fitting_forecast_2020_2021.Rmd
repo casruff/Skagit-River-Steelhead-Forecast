@@ -69,6 +69,14 @@ if(!require("R2jags")) {
   install.packages("R2jags")
   library("R2jags")
 }
+if(!require("dclone")) {
+  install.packages("dclone")
+  library("dclone")
+}
+if(!require("snow")) {
+  install.packages("snow")
+  library("snow")
+}
 ## set directory locations
 datadir <- here("data")
 jagsdir <- here("jags")
@@ -100,17 +108,50 @@ fit_jags <- function(model, data, params, inits, ctrl, dir = jagsdir) {
 
 #alternative wrapper to fit model in parallel; one chain per core
 fit_jags2<-function(model,data,params,inits,ctrl,dir=jagsdir){
-  jm<-jags.parallel(data=data, 
-                    inits=inits,
-                    parameters.to.save=params,
-                    model.file = file.path(jagsdir, model),
-                    n.chains = ctrl$chains, 
-                    n.iter = ctrl$length, 
-                    n.burnin = ctrl$burn,
-                    n.thin = ctrl$thin,
-                    DIC = TRUE,
-  )
-  return(as.mcmc.list(as.mcmc(jm)))
+  # jm<-jags.parallel(data=data, 
+  #                   inits=inits,
+  #                   parameters.to.save=params,
+  #                   model.file = file.path(jagsdir, model),
+  #                   n.chains = ctrl$chains, 
+  #                   n.iter = ctrl$length, 
+  #                   n.burnin = ctrl$burn,
+  #                   n.thin = ctrl$thin,
+  #                   DIC = TRUE,
+  # )
+  # write.csv(jm$BUGSoutput$summary,file.path(savedir,paste(model,".csv",sep="")))
+  # jm<-jags.parfit(data=data,
+  #                   inits=inits,
+  #                   parameters.to.save=params,
+  #                   model.file = file.path(jagsdir, model),
+  #                   n.chains = ctrl$chains,
+  #                   n.iter = ctrl$length,
+  #                   n.burnin = ctrl$burn,
+  #                   n.thin = ctrl$thin,
+  #                   DIC = TRUE,
+  # )
+  # return(as.mcmc.list(as.mcmc(jm)))
+  cl <- makeCluster(3, type = "SOCK")
+  inits2 <- jags.fit(data=data,
+                     params=params, 
+                     model=file.path(jagsdir, model), 
+                     inits=inits,
+                     n.chains=ctrl$chains,
+                     n.adapt = 0,
+                     n.update = 0,
+                     n.iter = 0)$state(internal = TRUE)
+  jm <- jags.parfit(cl=cl,
+                    data = data,
+                    params = params, 
+                    model = file.path(jagsdir, model),
+                    inits = inits2,
+                    n.adapt = ctrl$burn*0.5,
+                    n.update = ctrl$burn*0.5,
+                    n.iter = ctrl$length-ctrl$burn,
+                    thin = ctrl$thin,
+                    n.chains = ctrl$chains
+                    )
+  stopCluster(cl)
+  return(jm)
 }
 
 ```
@@ -804,7 +845,7 @@ mcmc_ctrl <- list(
   chains = 4,
   length = 20000,#5e5,
   burn = 10000,#2e5,
-  thin = 10#400
+  thin = 4#400
 )
 ## total number of MCMC samples after burnin
 mcmc_samp <- mcmc_ctrl$length*mcmc_ctrl$chains/mcmc_ctrl$thin
@@ -929,15 +970,15 @@ par_conv <- c("alpha","beta",paste0("gamma[",seq(3),"]"),
 ## Gelman-Rubin
 gelman.diag(mod_fits[[1]][,par_conv])
 ## Autocorrelation
-t(round(autocorr.diag(mod_fits[[1]][,par_conv],
-                      lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
-                      relative=FALSE), 2))
+# t(round(autocorr.diag(mod_fits[[1]][,par_conv],
+#                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
+#                       relative=FALSE), 2))
 ## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
 fit_bh_cov_MA1_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_MA1_AR1.rds"))
-my_sso2 <- launch_shinystan(as.shinystan(fit_bh_cov_MA1_AR1))
-summary_stats2<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso2,what=x)))
-colnames(summary_stats2)[1:4]<-c("rhat","neff","mean","sd")
-write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"))
+# my_sso2 <- launch_shinystan(as.shinystan(fit_bh_cov_MA1_AR1))
+# summary_stats2<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso2,what=x)))
+# colnames(summary_stats2)[1:4]<-c("rhat","neff","mean","sd")
+# write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"))
 ```
 
 
@@ -1046,12 +1087,12 @@ par_conv <- c("alpha","beta",paste0("gamma[",seq(3),"]"),
 ## Gelman-Rubin
 gelman.diag(mod_fits[[2]][,par_conv])
 ## Autocorrelation
-t(round(autocorr.diag(mod_fits[[2]][,par_conv],
-                      lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
-                      relative=FALSE), 2))
+# t(round(autocorr.diag(mod_fits[[2]][,par_conv],
+#                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
+#                       relative=FALSE), 2))
 ## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
-fit_bh_cov_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_AR.rds"))
-my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR1))
+fit_bh_cov_AR <- readRDS(file.path(savedir,"fit_bh_cov_AR.rds"))
+my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR))
 summary_stats1<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso,what=x)))
 colnames(summary_stats1)[1:4]<-c("rhat","neff","mean","sd")
 write.csv(summary_stats1,file.path(savedir,"Summary_stats_AR.csv"))
@@ -1162,12 +1203,12 @@ par_conv <- c("alpha","beta",paste0("gamma[",seq(3),"]"),
 ## Gelman-Rubin
 gelman.diag(mod_fits[[3]][,par_conv])
 ## Autocorrelation
-t(round(autocorr.diag(mod_fits[[3]][,par_conv],
-                      lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
-                      relative=FALSE), 2))
+# t(round(autocorr.diag(mod_fits[[3]][,par_conv],
+#                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
+#                       relative=FALSE), 2))
 ## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
-fit_bh_cov_AR1_resid <- readRDS(file.path(savedir,"fit_bh_cov_AR_resid.rds"))
-my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR1_resid))
+fit_bh_cov_AR_resid <- readRDS(file.path(savedir,"fit_bh_cov_AR_resid.rds"))
+my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR_resid))
 summary_stats3<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso,what=x)))
 colnames(summary_stats3)[1:4]<-c("rhat","neff","mean","sd")
 write.csv(summary_stats3,file.path(savedir,"Summary_stats_AR_resid.csv"))
