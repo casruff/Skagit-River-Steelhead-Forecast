@@ -1,6 +1,1 @@
-Count = 1 ; Time = 0.2 
-Count = 1 ; Time = 0.6 
-Count = 1 ; Time = 1.2 
-Count = 1 ; Time = 1.6 
-Count = 1 ; Time = 15.8 
-Count = 1 ; Time = 17 
+Count = 1 ; Time = 0 
