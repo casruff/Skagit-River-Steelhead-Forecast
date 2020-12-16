@@ -69,6 +69,14 @@ if(!require("R2jags")) {
   install.packages("R2jags")
   library("R2jags")
 }
+if(!require("dclone")) {
+  install.packages("dclone")
+  library("dclone")
+}
+if(!require("snow")) {
+  install.packages("snow")
+  library("snow")
+}
 ## set directory locations
 datadir <- here("data")
 jagsdir <- here("jags")
@@ -100,17 +108,50 @@ fit_jags <- function(model, data, params, inits, ctrl, dir = jagsdir) {
 
 #alternative wrapper to fit model in parallel; one chain per core
 fit_jags2<-function(model,data,params,inits,ctrl,dir=jagsdir){
-  jm<-jags.parallel(data=data, 
-                    inits=inits,
-                    parameters.to.save=params,
-                    model.file = file.path(jagsdir, model),
-                    n.chains = ctrl$chains, 
-                    n.iter = ctrl$length, 
-                    n.burnin = ctrl$burn,
-                    n.thin = ctrl$thin,
-                    DIC = TRUE,
-  )
-  return(as.mcmc.list(as.mcmc(jm)))
+  # jm<-jags.parallel(data=data, 
+  #                   inits=inits,
+  #                   parameters.to.save=params,
+  #                   model.file = file.path(jagsdir, model),
+  #                   n.chains = ctrl$chains, 
+  #                   n.iter = ctrl$length, 
+  #                   n.burnin = ctrl$burn,
+  #                   n.thin = ctrl$thin,
+  #                   DIC = TRUE,
+  # )
+  # write.csv(jm$BUGSoutput$summary,file.path(savedir,paste(model,".csv",sep="")))
+  # jm<-jags.parfit(data=data,
+  #                   inits=inits,
+  #                   parameters.to.save=params,
+  #                   model.file = file.path(jagsdir, model),
+  #                   n.chains = ctrl$chains,
+  #                   n.iter = ctrl$length,
+  #                   n.burnin = ctrl$burn,
+  #                   n.thin = ctrl$thin,
+  #                   DIC = TRUE,
+  # )
+  # return(as.mcmc.list(as.mcmc(jm)))
+  cl <- makeCluster(3, type = "SOCK")
+  inits2 <- jags.fit(data=data,
+                     params=params, 
+                     model=file.path(jagsdir, model), 
+                     inits=inits,
+                     n.chains=ctrl$chains,
+                     n.adapt = 0,
+                     n.update = 0,
+                     n.iter = 0)$state(internal = TRUE)
+  jm <- jags.parfit(cl=cl,
+                    data = data,
+                    params = params, 
+                    model = file.path(jagsdir, model),
+                    inits = inits2,
+                    n.adapt = ctrl$burn*0.5,
+                    n.update = ctrl$burn*0.5,
+                    n.iter = ctrl$length-ctrl$burn,
+                    thin = ctrl$thin,
+                    n.chains = ctrl$chains
+                    )
+  stopCluster(cl)
+  return(jm)
 }
 
 ```
@@ -260,8 +301,11 @@ cat("
     for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
     
     ## AR(1) coef for proc errors
-    phi ~ dunif(-0.999,0.999);
+    #phi ~ dunif(-0.999,0.999);
     #phi <- 0;
+    phi_prior ~ dbeta(2,2);
+    phi <- phi_prior*2-1;
+    #phi ~ dunif(0,0.999);
     
     ## innovation in first year
     innov_1 ~ dnorm(0,tau_r*(1-phi*phi));
@@ -311,6 +355,7 @@ cat("
     E_ln_Rec[1] <- ln_BH_a[1] + ln_Sp[1] - log(1 + beta*Sp[1]) + phi*innov_1;
     tot_ln_Rec[1] ~ dnorm(E_ln_Rec[1],tau_r);
     res_ln_Rec[1] <- tot_ln_Rec[1] - E_ln_Rec[1];
+    w[1] <- phi * innov_1 + res_ln_Rec[1];
     ## median of total recruits
     tot_Rec[1] <- exp(tot_ln_Rec[1]);
     
@@ -330,6 +375,7 @@ cat("
     E_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + phi*res_ln_Rec[t-1];
     tot_ln_Rec[t] ~ dnorm(E_ln_Rec[t],tau_r);
     res_ln_Rec[t] <- tot_ln_Rec[t] - E_ln_Rec[t];
+    w[t] <- phi * res_ln_Rec[t-1] + res_ln_Rec[t];
     
     ## median of total recruits
     tot_Rec[t] <- exp(tot_ln_Rec[t]);
@@ -437,14 +483,14 @@ model {
   ## AR(1) coef for recruitment residual
   #phi ~ dunif(-0.999,0.999);
   #phi <- 0;
-  #phi_prior ~ dbeta(2,2);
-  #phi <- phi_prior*2-1;
-  phi ~ dunif(0,0.999);
+  phi_prior ~ dbeta(2,2);
+  phi <- phi_prior*2-1;
+  #phi ~ dunif(0,0.999);
 
   ## MA(1) coef recruitment residual
-  #theta_res_prior ~ dbeta(2,2);
-  #theta_res <- theta_res_prior*2-1;
-  theta_res ~ dunif(0,0.999);
+  theta_res_prior ~ dbeta(2,2);
+  theta_res <- theta_res_prior*2-1;
+  #theta_res ~ dunif(0,0.999);
 
   ## innovation in first year
   #innov_1 ~ dnorm(0,tau_r*(1-phi*phi));#AR1
@@ -493,10 +539,11 @@ model {
   ## predicted recruits in BY t
   covar[1] <- inprod(gamma,mod_cvrs[1,]);
   ln_BH_a[1] <- mu_BH_a + covar[1];
-  #z_res_ln_Rec[1] <- 0;#fully non-centered
-  res_ln_Rec[1] <- 0;
-  w[1] <- innov_1;  
-  tot_ln_Rec[1] <- ln_BH_a[1] + ln_Sp[1] - log(1 + beta*Sp[1]) + w[1];
+  E_ln_Rec[1] <- ln_BH_a[1] + ln_Sp[1] - log(1 + beta*Sp[1]) + phi * innov_1 + theta_res * 0;
+  tot_ln_Rec[1] ~ dnorm(E_ln_Rec[1], tau_r);
+  res_ln_Rec[1] <- tot_ln_Rec[1] - E_ln_Rec[1];
+  w[1] <- phi * innov_1 + theta_res * 0 + res_ln_Rec[1] 
+    
   ## median of total recruits
   tot_Rec[1] <- exp(tot_ln_Rec[1]);
   
@@ -514,25 +561,15 @@ model {
     covar[t] <- inprod(gamma, mod_cvrs[t,]);
     ln_BH_a[t] <- mu_BH_a + covar[t]; 
     
+    #=============================================
+    #version 4; more similar to AR1 original model
+    #=============================================
+    E_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + phi * w[t-1] + theta_res * res_ln_Rec[t-1];
+    tot_ln_Rec[t] ~ dnorm(E_ln_Rec[t], tau_r);
+    res_ln_Rec[t] <- tot_ln_Rec[t] - E_ln_Rec[t];
+    w[t] <- phi * w[t-1] + theta_res * res_ln_Rec[t-1] + res_ln_Rec[t]; 
     
-    #=============================
-    #version 1; fully non-centered
-    #=============================
-    #z_res_ln_Rec[t] ~ dnorm(0, 1);
-    #res_ln_Rec[t] <- z_res_ln_Rec[t] * sigma_r;
-    #w[t] <- phi * w[t-1] + theta_res * res_ln_Rec[t-1] + res_ln_Rec[t];
-    #=============================
-    #version 2; partially centered (what you ran)
-    #=============================
-    #res_ln_Rec[t] ~ dnorm(0, tau_r);
-    #w[t] <- phi * w[t-1] + theta_res * res_ln_Rec[t-1] + res_ln_Rec[t];
-    #============================
-    #version 3; fully centered
-    #============================
-    w[t] ~ dnorm(phi * w[t-1] + theta_res * res_ln_Rec[t-1], tau_r); 
-    res_ln_Rec[t] <- w[t]-w[t-1];
-
-    tot_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + w[t];
+    
     ## median of total recruits
     tot_Rec[t] <- exp(tot_ln_Rec[t]);
     ## R/S
@@ -605,6 +642,178 @@ model {
   ", file=file.path(jagsdir, "IPM_BH_cov_MA1_AR1.txt"))
 
 ```
+## Beverton-Holt with covars 
+
+```{r JAGS_BH_cov2_AR1_resid}
+cat("
+model {
+  
+  ##--------
+  ## PRIORS
+  ##--------
+  ## alpha = intrinsic productivity
+  alpha ~ dnorm(0,0.001) T(0,);
+  mu_BH_a <- log(alpha);
+  E_BH_a <- mu_BH_a + sigma_r/(2 - 2*phi^2);
+  
+  ## strength of dens depend
+  beta_inv ~ dnorm(0, 1e-9) T(0,);
+  beta <- 1/beta_inv;
+  
+  ## covariate effects
+  for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
+
+  ## AR(1) coef for recruitment residual
+  #phi ~ dunif(-0.999,0.999);
+  #phi <- 0;
+  phi_prior ~ dbeta(2,2);
+  phi <- phi_prior*2-1;
+  #phi ~ dunif(0,0.999);
+
+  ## innovation in first year
+  innov_1 ~ dnorm(0,tau_r*(1-phi*phi));#AR1
+
+  ## process variance for recruits model
+  sigma_r ~ dnorm(0, 2e-2) T(0,);
+  tau_r <- 1/sigma_r;
+  
+  ## obs variance for spawners
+  tau_s <- 1/sigma_s;
+  sigma_s ~ dnorm(0, 0.001) T(0,);
+  
+  ## unprojectable early recruits;
+  ## hyper mean across all popns
+  Rec_mu ~ dnorm(0,0.001);
+  ## hyper SD across all popns
+  Rec_sig ~ dunif(0,100);
+  ## precision across all popns
+  Rec_tau <- pow(Rec_sig,-2);
+  ## multipliers for unobservable total runs
+	ttl_run_mu ~ dunif(1,5);
+	ttl_run_tau ~ dunif(1,20);
+
+  ## get total cal yr returns for first age_min yrs
+  for(i in 1:(age_min+age_skip)) {
+		ln_tot_Run[i] ~ dnorm(ttl_run_mu*Rec_mu,Rec_tau/ttl_run_tau);
+		tot_Run[i] <- exp(ln_tot_Run[i]);
+  }
+  
+  ## maturity schedule
+  ## unif vec for Dirch prior
+  theta <- c(1,10,10,5,1,1)
+  ## hyper-mean for maturity
+  pi_eta ~ ddirch(theta);
+  ## hyper-prec for maturity
+  pi_tau ~ dnorm(0, 0.01) T(0,);
+  for(t in 1:(n_yrs-age_min+n_fore)) { pi_vec[t,1:A] ~ ddirch(pi_eta*pi_tau) }
+  
+  ## estimated harvest rate
+  for(t in 1:(n_yrs+n_fore)) { h_rate[t] ~ dunif(0,1) }
+
+  ##------------
+  ## LIKELIHOOD
+  ##------------
+  ## predicted recruits in BY t
+  covar[1] <- inprod(gamma,mod_cvrs[1,]);
+  ln_BH_a[1] <- mu_BH_a + covar[1];
+  E_ln_Rec[1] <- ln_BH_a[1] + ln_Sp[1] - log(1 + beta*Sp[1]) + phi * innov_1;
+  tot_ln_Rec[1] ~ dnorm(E_ln_Rec[1], tau_r);
+  res_ln_Rec[1] <- tot_ln_Rec[1] - E_ln_Rec[1];
+  w[1] <- phi * innov_1 + res_ln_Rec[1];
+  
+  ## median of total recruits
+  tot_Rec[1] <- exp(tot_ln_Rec[1]);
+  
+  ## R/S
+  ln_RS[1] <- tot_ln_Rec[1] - ln_Sp[1];
+  
+  ## brood-yr recruits by age
+  for(a in 1:A) {
+    Rec[1,a] <- tot_Rec[1] * pi_vec[1,a];
+  }
+  
+  ## brood years 2:(n_yrs-age_min)
+  for(t in 2:(n_yrs-age_min+n_fore)) {
+    ## predicted recruits in BY t
+    covar[t] <- inprod(gamma, mod_cvrs[t,]);
+    ln_BH_a[t] <- mu_BH_a + covar[t]; 
+    E_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + phi * w[t-1];
+    tot_ln_Rec[t] ~ dnorm(E_ln_Rec[t], tau_r);
+    res_ln_Rec[t] <- tot_ln_Rec[t] - E_ln_Rec[t];
+    w[t] <- phi * w[t-1] + res_ln_Rec[t];
+
+    ## median of total recruits
+    tot_Rec[t] <- exp(tot_ln_Rec[t]);
+    ## R/S
+    ln_RS[t] <- tot_ln_Rec[t] - ln_Sp[t];
+    ## brood-yr recruits by age
+    for(a in 1:A) {
+      Rec[t,a] <- tot_Rec[t] * pi_vec[t,a];
+    }
+  } ## end t loop over year
+  
+  ## get predicted calendar year returns by age
+  ## matrix Run has dim [(n_yrs-age_min) x A]
+  ## step 1: incomplete early broods
+  ## first cal yr of this grp is first brood yr + age_min + age_skip
+  for(i in 1:(age_max-age_min-age_skip)) {
+    ## projected recruits
+    for(a in 1:(i+age_skip)) {
+      Run[i,a] <- Rec[(age_skip+i)-a+1,a];
+    }
+    ## imputed recruits
+    for(a in (i+1+age_skip):A) {
+      lnRec[i,a] ~ dnorm(Rec_mu,Rec_tau);
+      Run[i,a] <- exp(lnRec[i,a]);
+    }
+    ## total run size
+    tot_Run[i+age_min+age_skip] <- sum(Run[i,1:A]);
+    ## predicted age-prop vec for multinom
+    for(a in 1:A) {
+      age_v[i,a] <- Run[i,a] / tot_Run[i+age_min];
+    }
+    ## multinomial for age comp
+    dat_age[i,1:A] ~ dmulti(age_v[i,1:A],dat_age[i,A+1]);
+    lp_age[i] <- logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]);
+  }
+  
+  ## step 2: info from complete broods
+  ## first cal yr of this grp is first brood yr + age_max
+  for(i in (A-age_skip):(n_yrs-age_min-age_skip+n_fore)) {
+    for(a in 1:A) {
+      Run[i,a] <- Rec[(age_skip+i)-a+1,a];
+    }
+    ## total run size
+    tot_Run[i+age_min+age_skip] <- sum(Run[i,1:A]);
+    ## predicted age-prop vec for multinom
+    for(a in 1:A) {
+      age_v[i,a] <- Run[i,a] / tot_Run[i+age_min];
+    }
+    ## multinomial for age comp
+    dat_age[i,1:A] ~ dmulti(age_v[i,1:A],dat_age[i,A+1]);
+    #lp_age[i] <- logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]);
+    lp_age[i] <- ifelse(i < n_yrs-age_min-age_skip+n_fore,
+    logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]),0)
+  }
+  
+  ## get predicted calendar year spawners
+  ## first cal yr is first brood yr
+  for(t in 1:(n_yrs+n_fore)) {
+    ## obs model for spawners
+    # Sp[t] <- max(10,tot_Run[t] - dat_harv[t]);
+    est_harv[t] = h_rate[t] * tot_Run[t];
+    dat_harv[t] ~ dlnorm(log(est_harv[t]), 20);
+    Sp[t] = tot_Run[t] - est_harv[t];
+    ln_Sp[t] <- log(Sp[t]);
+    ln_dat_esc[t] ~ dnorm(ln_Sp[t], tau_s);
+    lp_esc[t] <- ifelse(t < n_yrs + 1,logdensity.norm(ln_dat_esc[t],ln_Sp[t], tau_s),0);
+  }
+  
+} ## end model description
+    
+  ", file=file.path(jagsdir, "IPM_BH_cov_AR_resid.txt"))
+
+```
 
 
 ***
@@ -615,7 +824,7 @@ Before fitting the model in JAGS, we need to specify the MCMC control parameters
 
 ```{r jags_IO_base}
 ## empty list for fits
-n_mods <- 2
+n_mods <- 3
 mod_fits <- vector("list", n_mods)
 ```
 
@@ -634,9 +843,9 @@ dat_jags <- list(dat_age = dat_age,
 ## 2. MCMC control params
 mcmc_ctrl <- list(
   chains = 4,
-  length = 5e5,
-  burn = 2e5,
-  thin = 400
+  length = 20000,#5e5,
+  burn = 10000,#2e5,
+  thin = 4#400
 )
 ## total number of MCMC samples after burnin
 mcmc_samp <- mcmc_ctrl$length*mcmc_ctrl$chains/mcmc_ctrl$thin
@@ -659,7 +868,7 @@ dat_jags$n_cov <- length(cset)
 dat_jags$mod_cvrs <- scl_cvrs[, cset]
 ```
 
-First, we will fit a beverton holt model assuming MA1 and AR1 errors
+First, we will fit a beverton holt model assuming MA1 and AR1 recruitment residuals
 
 ```{r fit_BH_cov_MA1_AR1_show, eval = FALSE, message = FALSE, warning = FALSE, cache = FALSE}
 ## function for inits
@@ -761,9 +970,9 @@ par_conv <- c("alpha","beta",paste0("gamma[",seq(3),"]"),
 ## Gelman-Rubin
 gelman.diag(mod_fits[[1]][,par_conv])
 ## Autocorrelation
-t(round(autocorr.diag(mod_fits[[1]][,par_conv],
-                      lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
-                      relative=FALSE), 2))
+# t(round(autocorr.diag(mod_fits[[1]][,par_conv],
+#                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
+#                       relative=FALSE), 2))
 ## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
 fit_bh_cov_MA1_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_MA1_AR1.rds"))
 my_sso2 <- launch_shinystan(as.shinystan(fit_bh_cov_MA1_AR1))
@@ -774,7 +983,7 @@ write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"))
 
 
 
-next we will fit a beverton holt model assuming AR1 errors only
+next we will fit a beverton holt model assuming AR1 process errors only
 
 ```{r fit_BH_cov_AR1_show, eval=FALSE, message=FALSE, warning=FALSE, cache=FALSE}
 ## function for inits
@@ -790,7 +999,7 @@ init_vals_cov <- function() {
        Rec_mu = log(1000),
        Rec_sig = 0.1,
        tot_ln_Rec = rep(log(1000), n_yrs - age_min + n_fore),
-       phi = 0.5,
+       phi_prior = 0.5,
        innov_1 = 0)
 }
 
@@ -833,7 +1042,7 @@ init_vals_cov <- function() {
        Rec_mu = log(1000),
        Rec_sig = 0.1,
        tot_ln_Rec = rep(log(1000), n_yrs - age_min + n_fore),
-       phi = 0.5,
+       phi_prior = 0.5,
        innov_1 = 0)
 }
 
@@ -878,17 +1087,132 @@ par_conv <- c("alpha","beta",paste0("gamma[",seq(3),"]"),
 ## Gelman-Rubin
 gelman.diag(mod_fits[[2]][,par_conv])
 ## Autocorrelation
-t(round(autocorr.diag(mod_fits[[2]][,par_conv],
-                      lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
-                      relative=FALSE), 2))
+# t(round(autocorr.diag(mod_fits[[2]][,par_conv],
+#                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
+#                       relative=FALSE), 2))
 ## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
-fit_bh_cov_AR1 <- readRDS(file.path(savedir,"fit_bh_cov_AR.rds"))
-my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR1))
+fit_bh_cov_AR <- readRDS(file.path(savedir,"fit_bh_cov_AR.rds"))
+my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR))
 summary_stats1<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso,what=x)))
 colnames(summary_stats1)[1:4]<-c("rhat","neff","mean","sd")
 write.csv(summary_stats1,file.path(savedir,"Summary_stats_AR.csv"))
 ```
 
+
+next we will fit a beverton holt model assuming AR1 recruitment residuals only
+
+```{r fit_BH_cov_AR1_resid_show, eval=FALSE, message=FALSE, warning=FALSE, cache=FALSE}
+## function for inits
+init_vals_cov <- function() {
+  list(alpha = 5,
+       beta_inv = exp(mean(ln_dat_esc, na.rm = TRUE)),
+       gamma = rep(0, 3),
+       pi_tau = 10,
+       pi_eta = rep(1,A),
+       pi_vec = matrix(c(0.01,0.35,0.47,0.15,0.01,0.01),
+                       n_yrs-age_min+n_fore, A, 
+                       byrow = TRUE),
+       Rec_mu = log(1000),
+       Rec_sig = 0.1,
+       tot_ln_Rec = rep(log(1000), n_yrs - age_min + n_fore),
+       phi_prior = 0.5,
+       innov_1 = 0)
+}
+
+## params/states to return
+par_jags <- c("alpha","E_BH_a","ln_BH_a",
+              "beta",
+              "gamma",
+              "Sp","Rec","tot_ln_Rec","ln_RS",
+              "pi_eta","pi_tau",
+              "sigma_r","sigma_s","res_ln_Rec",
+              "lp_age","lp_esc","phi"
+              )
+
+cat("Count =", 3, "; Time =", round(((proc.time()-timer_start)/60)["elapsed"], 1), "\n",
+          file="cnt_time.txt", append=TRUE)
+
+## fit model & save it
+# mod_fits[[3]] <- fit_jags("IPM_BH_cov_AR_resid.txt", dat_jags, par_jags,
+#                           init_vals_cov, mcmc_ctrl)
+mod_fits[[3]] <- fit_jags2(model="IPM_BH_cov_AR_resid.txt",
+                           data=dat_jags,
+                           params=par_jags,
+                           inits=init_vals_cov,
+                           ctrl=mcmc_ctrl
+                           )
+```
+
+
+```{r fit_BH_cov_AR1_resid, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, eval=TRUE}
+
+init_vals_cov <- function() {
+  list(alpha = 5,
+       beta_inv = exp(mean(ln_dat_esc, na.rm = TRUE)),
+       gamma = rep(0, 3),
+       pi_tau = 10,
+       pi_eta = rep(1,A),
+       pi_vec = matrix(c(0.01,0.35,0.47,0.15,0.01,0.01),
+                       n_yrs-age_min+n_fore, A, 
+                       byrow = TRUE),
+       Rec_mu = log(1000),
+       Rec_sig = 0.1,
+       tot_ln_Rec = rep(log(1000), n_yrs - age_min + n_fore),
+       phi_prior = 0.5,
+       innov_1 = 0)
+}
+
+## params/states to return
+par_jags <- c("alpha","E_BH_a","ln_BH_a",
+              "beta",
+              "gamma",
+              "Sp","Rec","tot_ln_Rec","ln_RS",
+              "pi_eta","pi_tau",
+              "sigma_r","sigma_s","res_ln_Rec",
+              "lp_age","lp_esc","phi"
+              )
+
+cat("Count =", 3, "; Time =", round(((proc.time()-timer_start)/60)["elapsed"], 1), "\n",
+          file="cnt_time.txt", append=TRUE)
+
+## if file exists, load it
+if(file.exists(file.path(savedir, "fit_bh_cov_AR_resid.rds"))) {
+  mod_fits[[3]] <- readRDS(file.path(savedir, "fit_bh_cov_AR_resid.rds"))
+} else { ## else, fit & save
+  # mod_fits[[3]] <- fit_jags("IPM_BH_cov_AR_resid.txt", dat_jags, par_jags,
+  #                           init_vals_cov, mcmc_ctrl)
+  mod_fits[[3]] <- fit_jags2(model="IPM_BH_cov_AR_resid.txt",
+                           data=dat_jags,
+                           params=par_jags,
+                           inits=init_vals_cov,
+                           ctrl=mcmc_ctrl
+                           )
+  saveRDS(mod_fits[[3]], file.path(savedir, "fit_bh_cov_AR_resid.rds"))
+}
+```
+
+
+### Model diagnostics AR1 recruitment residuals
+
+Here is a table of the Gelman & Rubin statistics $(R_{hat})$ for the estimated parameters. Recall that we set an upper threshold of `r Rhat_thresh`, so values larger than that deserve some additional inspection.
+
+```{r diag_BH_AR1_resid, eval=TRUE}
+## params of interest
+par_conv <- c("alpha","beta",paste0("gamma[",seq(3),"]"),
+              "sigma_r","sigma_s","pi_tau","phi",paste0("pi_eta[",seq(A-1),"]"))
+## Gelman-Rubin
+gelman.diag(mod_fits[[3]][,par_conv])
+## Autocorrelation
+# t(round(autocorr.diag(mod_fits[[3]][,par_conv],
+#                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
+#                       relative=FALSE), 2))
+## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
+fit_bh_cov_AR_resid <- readRDS(file.path(savedir,"fit_bh_cov_AR_resid.rds"))
+my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR_resid))
+summary_stats3<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso,what=x)))
+colnames(summary_stats3)[1:4]<-c("rhat","neff","mean","sd")
+write.csv(summary_stats3,file.path(savedir,"Summary_stats_AR_resid.csv"))
+```
 
 # Model selection
 
@@ -919,8 +1243,8 @@ model_weights <- loo_model_weights(LOOIC, method = "pseudobma",optim_method = "B
 tbl_LOOIC <- round(loo_compare(x = LOOIC), 2)
 rownames(tbl_LOOIC) <- sub("model", "", rownames(tbl_LOOIC))
 tbl_LOOIC <- tbl_LOOIC[order(as.numeric(rownames(tbl_LOOIC))), ]
-tbl_LOOIC <- cbind(model = c("B-H","B-H"),
-                   error = c("MA1_AR1","AR1"),
+tbl_LOOIC <- cbind(model = c("B-H","B-H","B-H"),
+                   error = c("MA1_AR1","AR1","AR1_resid"),
                    as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights))
 tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
 
@@ -933,7 +1257,104 @@ best_fit <- mod_fits[[best_i]]
 These results show that the `r mod_names[best_i,"mod"]` model with `r mod_names[best_i,"error"]` error has the lowest LOOIC value.  All results will be derived from model averaging based on pseudo bayesian model average weights. 
 
 
+# Model Selection Via Approximate leave-future-out cross validation
+Description here
 
+```{r }
+
+m=1
+N <- 43
+L <- 20
+k_thres <- 0.7
+approx_elpds_1sap <- rep(NA, N)
+
+# more stable than log(sum(exp(x))) 
+log_sum_exp <- function(x) {
+  max_x <- max(x)
+  max_x + log(sum(exp(x - max_x)))
+}
+
+# more stable than log(mean(exp(x)))
+log_mean_exp <- function(x) {
+  log_sum_exp(x) - log(length(x))
+}
+
+# compute log of raw importance ratios
+# sums over observations *not* over posterior samples
+sum_log_ratios <- function(loglik, ids = NULL) {
+  if (!is.null(ids)) loglik <- loglik[, ids, drop = FALSE]
+  rowSums(loglik)
+}
+
+# for printing comparisons later
+rbind_print <- function(...) {
+  round(rbind(...), digits = 2)
+}
+
+#extract pontwise log likelihoods
+tmp_lp <- as.matrix(mod_fits[[m]])
+## extract pointwise likelihoods
+tmp_lp <- tmp_lp[,grepl("lp_", colnames(tmp_lp))]
+## if numerical underflows, convert -Inf to 5% less than min(likelihood)
+if(any(is.infinite(tmp_lp))) {
+  tmp_lp[is.infinite(tmp_lp)] <- NA
+  tmp_min <- min(tmp_lp, na.rm = TRUE)
+  tmp_lp[is.na(tmp_lp)] <- tmp_min * 1.05
+}
+
+tmp_lp<-tmp_lp[,grepl("esc", colnames(tmp_lp))]
+#get yrs assoc
+names_loglik<-data.frame(strsplit(colnames(tmp_lp),"\\[|\\]"))
+yrnames<-as.numeric(names_loglik[2,])
+
+loglik <- matrix(NA,ncol=N,nrow=dim(tmp_lp)[1])
+for(i in 1:N){
+  if(!is.null(ncol(tmp_lp[,yrnames==i]))){
+    loglik[,i] = apply(tmp_lp[,yrnames==i],1,sum)
+  }else(loglik[,i] = tmp_lp[,yrnames==i])
+}
+
+# initialize the process for i = L
+past <- 1:L
+oos <- L + 1
+# df_past <- df[past, , drop = FALSE]
+# df_oos <- df[c(past, oos), , drop = FALSE]
+# fit_past <- update(fit, newdata = df_past, recompile = FALSE)
+#loglik <- log_lik(fit_past, newdata = df_oos, oos = oos)
+approx_elpds_1sap[L + 1] <- log_mean_exp(loglik[, oos])
+
+# iterate over i > L
+i_refit <- L
+refits <- L
+ks <- NULL
+for (i in (L + 1):(N - 1)) {
+  past <- 1:i
+  oos <- i + 1
+  # df_past <- df[past, , drop = FALSE]
+  # df_oos <- df[c(past, oos), , drop = FALSE]
+  # loglik <- log_lik(fit_past, newdata = df_oos, oos = oos)
+
+  logratio <- sum_log_ratios(loglik, (i_refit + 1):i)
+  psis_obj <- suppressWarnings(psis(logratio))
+  k <- pareto_k_values(psis_obj)
+  ks <- c(ks, k)
+  # if (k > k_thres) {
+  #   # refit the model based on the first i observations
+  #   i_refit <- i
+  #   refits <- c(refits, i)
+  #   fit_past <- update(fit_past, newdata = df_past, recompile = FALSE)
+  #   loglik <- log_lik(fit_past, newdata = df_oos, oos = oos)
+  #   approx_elpds_1sap[i + 1] <- log_mean_exp(loglik[, oos])
+  # } else {
+    lw <- weights(psis_obj, normalize = TRUE)[, 1]
+    approx_elpds_1sap[i + 1] <- log_sum_exp(lw + loglik[, oos])
+  #}
+}
+
+approx_elpd_1sap <- sum(approx_elpds_1sap, na.rm = TRUE)
+print(paste("approx LFO =" ,approx_elpd_1sap))
+print(ks)
+```
 
 
 
