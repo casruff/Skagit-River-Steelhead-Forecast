@@ -1009,8 +1009,14 @@ for(n in 1:n_mods){
     
       
         ## fit model & save it
-        mod_fits[[t]] <- fit_jags(paste(model,".txt",sep = ""), dat_jags, par_jags,
-                                  init_vals_cov, mcmc_ctrl)
+        # mod_fits[[t]] <- fit_jags(paste(model,".txt",sep = ""), dat_jags, par_jags,
+        #                           init_vals_cov, mcmc_ctrl)
+        mod_fits[[t]]<-fit_jags2(model=paste(model,".txt",sep = ""),
+                           data=dat_jags,
+                           params=par_jags,
+                           inits=init_vals_cov,
+                           ctrl=mcmc_ctrl
+                           )
         saveRDS(mod_fits[[t]], file.path(savedir,paste(model,"_","y",i,".rds",sep = "")))
         
         c <- c + 1
