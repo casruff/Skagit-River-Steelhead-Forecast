@@ -72,7 +72,6 @@
     tot_ln_Rec[1] ~ dnorm(E_ln_Rec[1],tau_r);
     res_ln_Rec[1] <- tot_ln_Rec[1] - E_ln_Rec[1];
     w[1] <- phi * innov_1 + res_ln_Rec[1];
-    
     ## median of total recruits
     tot_Rec[1] <- exp(tot_ln_Rec[1]);
     
