@@ -1226,6 +1226,8 @@ for(i in 1:n_mods) {
   tmp_lp <- as.matrix(mod_fits[[i]])
   ## extract pointwise likelihoods
   tmp_lp <- tmp_lp[,grepl("lp_", colnames(tmp_lp))]
+  ## could choose to evaluate fit only to escapement instead of age (default commented out)
+  ##tmp_lp<-tmp_lp[,grepl("esc", colnames(tmp_lp))]
   ## if numerical underflows, convert -Inf to 5% less than min(likelihood)
   if(any(is.infinite(tmp_lp))) {
     tmp_lp[is.infinite(tmp_lp)] <- NA
@@ -1258,7 +1260,35 @@ These results show that the `r mod_names[best_i,"mod"]` model with `r mod_names[
 
 
 # Model Selection Via Approximate leave-future-out cross validation
+THIS SECTION NEEDS TO BE BETTER INTEGRATED INTO THE REST OF THE CODE:
+1) need to put it into the version that generates re-fits, or possibly into a separate APP
+2) need to better set up work directories for where original "full" fits vs "re-fits" with subset of data go so that the code below can find them without creating folders and moving things
+3) need to work on nameing conventions for re-fit files and how re-fit function below loads them...i suggest that file name is indexed by year of data instead of year of refitting!!!!
+
+
 ```{r }
+
+#load complete model fits & model refits with subset data
+loadmodfits<-function(modelnames){
+  mod_fits<-list()
+  for(i in 1:length(modelnames)){
+    mod_fits[[i]] <- readRDS(file.path(savedir, "saved_models",paste0("fit_",modelnames[i],".rds")))
+  }
+  return(mod_fits)
+}
+
+#refits
+loadrefits<-function(refitname,N,L){
+  numrefits<-N-L+1
+  re_fits<-list()
+  for(i in 1:numrefits){
+     re_fits[[i]] <- readRDS(file.path(savedir,paste0("IPM_",refitname,"_y",i,".rds")))
+  }
+  return(re_fits)
+}
+
+
+
 # more stable than log(sum(exp(x))) 
 log_sum_exp <- function(x) {
   max_x <- max(x)
@@ -1282,7 +1312,7 @@ rbind_print <- function(...) {
 }
 
 #function to extract log likelihood from fitted model
-extract_log_lik<-function(m,esc_only,N){
+extract_log_lik<-function(m,esc_only,N,mod_fits){
   #extract pontwise log likelihoods
   tmp_lp <- as.matrix(mod_fits[[m]])
   ## extract pointwise likelihoods
@@ -1311,18 +1341,32 @@ extract_log_lik<-function(m,esc_only,N){
 
 # functions modified from:
 # https://github.com/paul-buerkner/LFO-CV-paper/blob/master/case-study-LFO-CV.Rmd
-approx_LFO<-function(N=N,L,m=m,esc_only){
-  loglik =  extract_log_lik(m=m, esc_only = esc_only,N=N)
+approx_LFO<-function(N=N,L,m=m,esc_only,mod_fits,userefits,refitname,thres){
+  loglik =  extract_log_lik(m=m, esc_only = esc_only,N=N,mod_fits = mod_fits)
+  if(userefits=="Yes"){
+    re_fits =loadrefits(refitname=refitname,N=N,L=L)
+  }
+  i_refit <- L
+  refits <- L
   ks <- NULL
-  approx_elpds_1sap_no_refit <- rep(NA, N)
+  approx_elpds_1sap <- rep(NA, N)
   for (i in (N - 1):L) {
     logratio <- sum_log_ratios(loglik, (i + 1):N)
     psis_obj <- suppressWarnings(psis(logratio))
-    ks <- c(ks, pareto_k_values(psis_obj))
-    lw <- weights(psis_obj, normalize = TRUE)[, 1]
-    approx_elpds_1sap_no_refit[i + 1] <- log_sum_exp(lw + loglik[, i + 1])
+    k<-pareto_k_values(psis_obj)
+    ks <- c(ks, k)
+    if(k>thres & userefits=="Yes"){
+    #use_refit of model based on the first[i] observations
+      i_refit <- i
+      refits <- c(refits, i)
+      loglik =  extract_log_lik(m=m, esc_only = esc_only,N=N,mod_fits = re_fits[[(i+1)-L+1]])
+      approx_elpds_1sap[i + 1] <- log_mean_exp(loglik[, i + 1])
+    }else{
+      lw <- weights(psis_obj, normalize = TRUE)[, 1]
+      approx_elpds_1sap[i + 1] <- log_sum_exp(lw + loglik[, i + 1])
+    }
   }
-  results<-list(approx_elpds_1sap_no_refit,ks)
+  results<-list(approx_elpds_1sap,ks)
   names(results)<-c("LFO","ks")
   return(results)
 }
@@ -1338,20 +1382,19 @@ plot_ks <- function(ks, thres = 0.7,N,L) {
     ylim(-0.5, max(dat_ks$ks))
 }
 
-mod_fits[[1]] <- readRDS(file.path(savedir, "saved_models","fit_bh_cov_MA1_AR1.rds"))
-mod_fits[[2]] <- readRDS(file.path(savedir, "saved_models","fit_bh_cov_AR.rds"))
-mod_fits[[3]] <- readRDS(file.path(savedir, "saved_models", "fit_bh_cov_AR_resid.rds"))
-
 L=33
 N=yr_last-(yr_frst-1)
-esc_only="Yes"
-LFO1<-approx_LFO(N=N,L=L,m=1,esc_only=esc_only)
+esc_only="No"
+mod_fits<-loadmodfits(modelnames=c("bh_cov_MA1_AR1","bh_cov_AR","bh_cov_AR_resid"))
+
+
+LFO1<-approx_LFO(N=N,L=L,m=1,esc_only=esc_only,mod_fits=mod_fits,userefits="Yes",refitname="BH_cov_MA1_AR1",thres=0.7)
 plot_ks(LFO1$ks,N=N,L=L)
 
-LFO2<-approx_LFO(N=N,L=L,m=2,esc_only=esc_only)
+LFO2<-approx_LFO(N=N,L=L,m=2,esc_only=esc_only,mod_fits=mod_fits,userefits="Yes",refitname="BH_cov_AR",thres=0.7)
 plot_ks(LFO2$ks, N=N,L=L)
 
-LFO3<-approx_LFO(N=N,L=L,m=3,esc_only=esc_only)
+LFO3<-approx_LFO(N=N,L=L,m=3,esc_only=esc_only,mod_fits=mod_fits,userefits="Yes",refitname="BH_cov_AR_resid",thres=0.7)
 plot_ks(LFO3$ks, N=N,L=L)
 
 ELPD<-c(sum(LFO1$LFO,na.rm=T),sum(LFO2$LFO,na.rm=T),sum(LFO3$LFO,na.rm=T))
