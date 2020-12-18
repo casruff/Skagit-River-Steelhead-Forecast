@@ -1309,6 +1309,8 @@ extract_log_lik<-function(m,esc_only,N){
   return(loglik)
 }
 
+# functions modified from:
+# https://github.com/paul-buerkner/LFO-CV-paper/blob/master/case-study-LFO-CV.Rmd
 approx_LFO<-function(N=N,L,m=m,esc_only){
   loglik =  extract_log_lik(m=m, esc_only = esc_only,N=N)
   ks <- NULL
