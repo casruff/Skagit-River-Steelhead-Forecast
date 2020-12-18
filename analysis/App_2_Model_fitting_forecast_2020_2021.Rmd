@@ -1342,9 +1342,9 @@ mod_fits[[1]] <- readRDS(file.path(savedir, "saved_models","fit_bh_cov_MA1_AR1.r
 mod_fits[[2]] <- readRDS(file.path(savedir, "saved_models","fit_bh_cov_AR.rds"))
 mod_fits[[3]] <- readRDS(file.path(savedir, "saved_models", "fit_bh_cov_AR_resid.rds"))
 
-L=20
-N=yr_last-yr_frst
-esc_only="No"
+L=33
+N=yr_last-(yr_frst-1)
+esc_only="Yes"
 LFO1<-approx_LFO(N=N,L=L,m=1,esc_only=esc_only)
 plot_ks(LFO1$ks,N=N,L=L)
 
