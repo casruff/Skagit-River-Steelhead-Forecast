@@ -108,28 +108,6 @@ fit_jags <- function(model, data, params, inits, ctrl, dir = jagsdir) {
 
 #alternative wrapper to fit model in parallel; one chain per core
 fit_jags2<-function(model,data,params,inits,ctrl,dir=jagsdir){
-  # jm<-jags.parallel(data=data, 
-  #                   inits=inits,
-  #                   parameters.to.save=params,
-  #                   model.file = file.path(jagsdir, model),
-  #                   n.chains = ctrl$chains, 
-  #                   n.iter = ctrl$length, 
-  #                   n.burnin = ctrl$burn,
-  #                   n.thin = ctrl$thin,
-  #                   DIC = TRUE,
-  # )
-  # write.csv(jm$BUGSoutput$summary,file.path(savedir,paste(model,".csv",sep="")))
-  # jm<-jags.parfit(data=data,
-  #                   inits=inits,
-  #                   parameters.to.save=params,
-  #                   model.file = file.path(jagsdir, model),
-  #                   n.chains = ctrl$chains,
-  #                   n.iter = ctrl$length,
-  #                   n.burnin = ctrl$burn,
-  #                   n.thin = ctrl$thin,
-  #                   DIC = TRUE,
-  # )
-  # return(as.mcmc.list(as.mcmc(jm)))
   cl <- makeCluster(3, type = "SOCK")
   inits2 <- jags.fit(data=data,
                      params=params, 
@@ -1244,99 +1222,151 @@ These results show that the `r mod_names[best_i,"mod"]` model with `r mod_names[
 Description here
 
 ```{r }
-# 
-# m=1
-# N <- 43
-# L <- 20
-# k_thres <- 0.7
-# approx_elpds_1sap <- rep(NA, N)
-# 
-# # more stable than log(sum(exp(x)))
-# log_sum_exp <- function(x) {
-#   max_x <- max(x)
-#   max_x + log(sum(exp(x - max_x)))
-# }
-# 
-# # more stable than log(mean(exp(x)))
-# log_mean_exp <- function(x) {
-#   log_sum_exp(x) - log(length(x))
-# }
-# 
-# # compute log of raw importance ratios
-# # sums over observations *not* over posterior samples
-# sum_log_ratios <- function(loglik, ids = NULL) {
-#   if (!is.null(ids)) loglik <- loglik[, ids, drop = FALSE]
-#   rowSums(loglik)
-# }
-# 
-# # for printing comparisons later
-# rbind_print <- function(...) {
-#   round(rbind(...), digits = 2)
-# }
-# 
-# #extract pontwise log likelihoods
-# tmp_lp <- as.matrix(mod_fits[[m]])
-# ## extract pointwise likelihoods
-# tmp_lp <- tmp_lp[,grepl("lp_", colnames(tmp_lp))]
-# ## if numerical underflows, convert -Inf to 5% less than min(likelihood)
-# if(any(is.infinite(tmp_lp))) {
-#   tmp_lp[is.infinite(tmp_lp)] <- NA
-#   tmp_min <- min(tmp_lp, na.rm = TRUE)
-#   tmp_lp[is.na(tmp_lp)] <- tmp_min * 1.05
-# }
-# 
-# tmp_lp<-tmp_lp[,grepl("esc", colnames(tmp_lp))]
-# #get yrs assoc
-# names_loglik<-data.frame(strsplit(colnames(tmp_lp),"\\[|\\]"))
-# yrnames<-as.numeric(names_loglik[2,])
-# 
-# loglik <- matrix(NA,ncol=N,nrow=dim(tmp_lp)[1])
-# for(i in 1:N){
-#   if(!is.null(ncol(tmp_lp[,yrnames==i]))){
-#     loglik[,i] = apply(tmp_lp[,yrnames==i],1,sum)
-#   }else(loglik[,i] = tmp_lp[,yrnames==i])
-# }
-# 
-# # initialize the process for i = L
-# past <- 1:L
-# oos <- L + 1
-# # df_past <- df[past, , drop = FALSE]
-# # df_oos <- df[c(past, oos), , drop = FALSE]
-# # fit_past <- update(fit, newdata = df_past, recompile = FALSE)
-# #loglik <- log_lik(fit_past, newdata = df_oos, oos = oos)
-# approx_elpds_1sap[L + 1] <- log_mean_exp(loglik[, oos])
-# 
-# # iterate over i > L
-# i_refit <- L
-# refits <- L
-# ks <- NULL
-# for (i in (L + 1):(N - 1)) {
-#   past <- 1:i
-#   oos <- i + 1
-#   # df_past <- df[past, , drop = FALSE]
-#   # df_oos <- df[c(past, oos), , drop = FALSE]
-#   # loglik <- log_lik(fit_past, newdata = df_oos, oos = oos)
-# 
-#   logratio <- sum_log_ratios(loglik, (i_refit + 1):i)
-#   psis_obj <- suppressWarnings(psis(logratio))
-#   k <- pareto_k_values(psis_obj)
-#   ks <- c(ks, k)
-#   # if (k > k_thres) {
-#   #   # refit the model based on the first i observations
-#   #   i_refit <- i
-#   #   refits <- c(refits, i)
-#   #   fit_past <- update(fit_past, newdata = df_past, recompile = FALSE)
-#   #   loglik <- log_lik(fit_past, newdata = df_oos, oos = oos)
-#   #   approx_elpds_1sap[i + 1] <- log_mean_exp(loglik[, oos])
-#   # } else {
-#     lw <- weights(psis_obj, normalize = TRUE)[, 1]
-#     approx_elpds_1sap[i + 1] <- log_sum_exp(lw + loglik[, oos])
-#   #}
-# }
-# 
-# approx_elpd_1sap <- sum(approx_elpds_1sap, na.rm = TRUE)
-# print(paste("approx LFO =" ,approx_elpd_1sap))
-# print(ks)
+#load complete model fits & model refits with subset data
+loadmodfits<-function(modelnames){
+  mod_fits<-list()
+  for(i in 1:length(modelnames)){
+    mod_fits[[i]] <- readRDS(file.path(savedir,paste0("IPM_",modelnames[i],"_y",n_forecasts+1,".rds")))
+    #mod_fits[[i]] <- readRDS(file.path(savedir,paste0("fit_",modelnames[i],".rds")))
+  }
+  return(mod_fits)
+}
+
+#refits
+loadrefits<-function(refitname,N,L){
+  numrefits<-N-L+1
+  re_fits<-list()
+  for(i in 1:numrefits){
+     re_fits[[i]] <- readRDS(file.path(savedir,paste0("IPM_",refitname,"_y",i,".rds")))
+  }
+  return(re_fits)
+}
+
+# functions modified from:
+# https://github.com/paul-buerkner/LFO-CV-paper/blob/master/case-study-LFO-CV.Rmd
+
+# more stable than log(sum(exp(x))) 
+log_sum_exp <- function(x) {
+  max_x <- max(x)
+  max_x + log(sum(exp(x - max_x)))
+}
+
+# more stable than log(mean(exp(x)))
+log_mean_exp <- function(x) {
+  log_sum_exp(x) - log(length(x))
+}
+
+# compute log of raw importance ratios
+# sums over observations *not* over posterior samples
+sum_log_ratios <- function(ll, ids = NULL) {
+  if (!is.null(ids)) ll <- ll[, ids, drop = FALSE]
+  - rowSums(ll)
+}
+# for printing comparisons later
+rbind_print <- function(...) {
+  round(rbind(...), digits = 2)
+}
+
+#function to extract log likelihood from fitted model
+extract_log_lik<-function(m,esc_only,N,mod_fits){
+  #extract pontwise log likelihoods
+  tmp_lp <- as.matrix(mod_fits[[m]])
+  ## extract pointwise likelihoods
+  tmp_lp <- tmp_lp[,grepl("lp_", colnames(tmp_lp))]
+  ## if numerical underflows, convert -Inf to 5% less than min(likelihood)
+  if(any(is.infinite(tmp_lp))) {
+    tmp_lp[is.infinite(tmp_lp)] <- NA
+    tmp_min <- min(tmp_lp, na.rm = TRUE)
+    tmp_lp[is.na(tmp_lp)] <- tmp_min * 1.05
+  }
+  if(esc_only =="Yes"){
+    tmp_lp<-tmp_lp[,grepl("esc", colnames(tmp_lp))]
+  }
+  #get yrs assoc
+  names_loglik<-data.frame(strsplit(colnames(tmp_lp),"\\[|\\]"))
+  yrnames<-as.numeric(names_loglik[2,])
+  
+  loglik <- matrix(NA,ncol=N,nrow=dim(tmp_lp)[1])
+  for(i in 1:N){
+    if(!is.null(ncol(tmp_lp[,yrnames==i]))){
+      loglik[,i] = apply(tmp_lp[,yrnames==i],1,sum)
+    }else(loglik[,i] = tmp_lp[,yrnames==i])
+  }
+  return(loglik)
+}
+
+
+approx_LFO<-function(N=N,L,m=m,esc_only,mod_fits,userefits,refitname,thres){
+  loglik =  extract_log_lik(m=m, esc_only = esc_only,N=N,mod_fits = mod_fits)
+  ## look at Pareto k's
+  k_LOOIC<-pareto_k_values(loo(loglik))[(L+1):N]
+  if(userefits=="Yes"){
+    re_fits =loadrefits(refitname=refitname,N=N,L=L)
+  }
+  i_refit <- L
+  refits <- L
+  ks <- NULL
+  approx_elpds_1sap <- rep(NA, N)
+  for (i in (N - 1):L) {
+    logratio <- sum_log_ratios(loglik, (i + 1):N)
+    psis_obj <- suppressWarnings(psis(logratio))
+    k<-pareto_k_values(psis_obj)
+    ks <- c(ks, k)
+    if(k>thres & userefits=="Yes"){
+    #use_refit of model based on the first[i] observations
+      i_refit <- i
+      refits <- c(refits, i)
+      loglik =  extract_log_lik(m=m, esc_only = esc_only,N=N,mod_fits = re_fits[[(i+1)-L+1]])
+      approx_elpds_1sap[i + 1] <- log_mean_exp(loglik[, i + 1])
+    }else{
+      lw <- weights(psis_obj, normalize = TRUE)[, 1]
+      approx_elpds_1sap[i + 1] <- log_sum_exp(lw + loglik[, i + 1])
+    }
+  }
+  results<-list(approx_elpds_1sap,ks,k_LOOIC)
+  names(results)<-c("LFO","ks","k_LOOIC")
+  return(results)
+}
+
+plot_ks <- function(ks, thres = 0.7,N,L) {
+  ids = N:(L + 1)
+  dat_ks <- data.frame(ks = ks, ids = ids)
+  ggplot(dat_ks, aes(x = ids, y = ks)) + 
+    geom_point(aes(color = ks > thres), shape = 3, show.legend = FALSE) + 
+    geom_hline(yintercept = thres, linetype = 2, color = "red2") + 
+    scale_color_manual(values = c("cornflowerblue", "darkblue")) + 
+    labs(x = "Data point", y = "Pareto k") + 
+    ylim(-0.5, max(dat_ks$ks))
+}
+
+L=N-n_forecasts
+thres=0.7
+N=yr_last-(yr_frst-1)
+esc_only="No"
+mod_fits<-loadmodfits(modelnames=c("bh_cov_MA1_AR1","bh_cov_AR","bh_cov_AR_resid"))
+
+
+LFO1<-approx_LFO(N=N,L=L,m=1,esc_only=esc_only,mod_fits=mod_fits,userefits="Yes",refitname="BH_cov_MA1_AR1",thres=thres)
+# plot_ks(LFO1$ks,N=N,L=L,thres=thres)
+# plot_ks(LFO1$k_LOOIC,N=N,L=L,thres=thres)
+
+LFO2<-approx_LFO(N=N,L=L,m=2,esc_only=esc_only,mod_fits=mod_fits,userefits="Yes",refitname="BH_cov_AR",thres=thres)
+# plot_ks(LFO2$ks, N=N,L=L,thres=thres)
+# plot_ks(LFO2$k_LOOIC, N=N,L=L,thres=thres)
+
+LFO3<-approx_LFO(N=N,L=L,m=3,esc_only=esc_only,mod_fits=mod_fits,userefits="Yes",refitname="BH_cov_AR_resid",thres=thres)
+# plot_ks(LFO3$ks, N=N,L=L,thres=thres)
+# plot_ks(LFO3$k_LOOIC, N=N,L=L,thres=thres)
+
+ELPD<-c(sum(LFO1$LFO,na.rm=T),sum(LFO2$LFO,na.rm=T),sum(LFO3$LFO,na.rm=T))
+LFOIC<--2*ELPD-min(ELPD)
+delta_LFOIC<-LFOIC-min(LFOIC)
+names(delta_LFOIC)<-c("MA1_AR1","AR1","AR1_resid")
+print(delta_LFOIC)#like loo
+w<-exp(ELPD)/sum(exp(ELPD))
+names(w)<-c("MA1_AR1","AR1","AR1_resid")
+print(round(w,2))
+barplot(delta_LFOIC,ylab="Delta LFOIC")
 ```
 
 
