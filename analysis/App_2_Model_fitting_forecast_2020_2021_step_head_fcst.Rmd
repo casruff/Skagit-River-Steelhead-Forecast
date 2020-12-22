@@ -77,6 +77,10 @@ if(!require("snow")) {
   install.packages("snow")
   library("snow")
 }
+if(!require("rstan")) {
+  install.packages("rstan")
+  library("rstan")
+}
 ## set directory locations
 datadir <- here("data")
 jagsdir <- here("jags")
@@ -130,6 +134,14 @@ fit_jags2<-function(model,data,params,inits,ctrl,dir=jagsdir){
                     )
   stopCluster(cl)
   return(jm)
+}
+
+#generate summary stats file from MCMC object
+sum_stats<-function(mcmclist){
+  ESS<-apply(as.matrix(mcmclist),2,ess_bulk)
+  Rhat<-apply(as.matrix(mcmclist),2,Rhat)
+  summary_stats<-summary(mcmclist)
+  summary_stats<-data.frame(summary_stats$statistics,summary_stats$quantiles,ESS,Rhat)
 }
 
 ```
@@ -434,7 +446,6 @@ cat("
     ## obs model for spawners
     #Sp[t] <- max(10,tot_Run[t] - dat_harv[t]);
     est_harv[t] = ifelse(t > n_yrs,1,h_rate[t] * tot_Run[t]);
-    
     dat_harv[t] ~ dlnorm(log(est_harv[t]), 20);
     Sp[t] = tot_Run[t] - est_harv[t];
     ln_Sp[t] <- log(Sp[t]);
@@ -618,7 +629,7 @@ model {
   for(t in 1:(n_yrs+n_fore)) {
     ## obs model for spawners
     # Sp[t] <- max(10,tot_Run[t] - dat_harv[t]);
-    est_harv[t] = h_rate[t] * tot_Run[t];
+    est_harv[t] = ifelse(t > n_yrs,1,h_rate[t] * tot_Run[t]);
     dat_harv[t] ~ dlnorm(log(est_harv[t]), 20);
     Sp[t] = tot_Run[t] - est_harv[t];
     ln_Sp[t] <- log(Sp[t]);
@@ -790,7 +801,7 @@ model {
   for(t in 1:(n_yrs+n_fore)) {
     ## obs model for spawners
     # Sp[t] <- max(10,tot_Run[t] - dat_harv[t]);
-    est_harv[t] = h_rate[t] * tot_Run[t];
+    est_harv[t] = ifelse(t > n_yrs,1,h_rate[t] * tot_Run[t]);
     dat_harv[t] ~ dlnorm(log(est_harv[t]), 20);
     Sp[t] = tot_Run[t] - est_harv[t];
     ln_Sp[t] <- log(Sp[t]);
@@ -815,9 +826,9 @@ Before fitting the model in JAGS, we need to specify the MCMC control parameters
 ## 1. MCMC control params
 mcmc_ctrl <- list(
   chains = 4,
-  length = 200000,#5e5,
-  burn = 100000,#2e5,
-  thin = 100#400
+  length = 2000,#200000,#5e5,
+  burn = 1000,#100000,#2e5,
+  thin = 1#100#400
 )
 ## total number of MCMC samples after burnin
 mcmc_samp <- mcmc_ctrl$length*mcmc_ctrl$chains/mcmc_ctrl$thin
@@ -835,12 +846,12 @@ n_mods <- 3
 ## empty list for fits
 mod_fits <- vector("list", n_mods*(n_forecasts+1))
 ## models
-models <- c("IPM_BH_cov_MA1_AR1","IPM_BH_cov_AR","IPM_BH_cov_AR_resid")
+#models <- c("IPM_BH_cov_MA1_AR1","IPM_BH_cov_AR","IPM_BH_cov_AR_resid")
+models <- c("IPM_BH_cov_MA1_AR1","IPM_BH_cov_AR_resid")
           
 ## counter to index fitted jags models (33 in total: 3 models x 11 1 year ahead forecasts including upcoming
 ## return year)
 t <- 1
-
 for(n in 1:n_mods){
   ## counter to index data to feed model for year specific forecasts
   ## first forecast will be for 10 years prior to the most recent return year;
@@ -850,8 +861,8 @@ for(n in 1:n_mods){
   model <- models[n]
   
   for(i in 1:(n_forecasts+1)){
-    if(file.exists(file.path(savedir, paste(model,"_","y",i,".rds",sep = "")))) {
-      mod_fits[[t]] <- readRDS(file.path(savedir, paste(model,"_","y",i,".rds",sep = "")))
+    if(file.exists(file.path(savedir,paste(model,"_","y",i,".rds",sep = "")))) {
+      mod_fits[[t]] <- readRDS(file.path(savedir,paste(model,"_","y",i,".rds",sep = "")))
       c <- c + 1
       t <- t + 1
   } else { ## else, fit & save
@@ -969,7 +980,7 @@ for(n in 1:n_mods){
                  Rec_mu = log(1000),
                  Rec_sig = 0.1,
                  tot_ln_Rec = rep(log(1000), n_yrs - age_min + n_fore),
-                 phi_prior = 0.75,theta_res_prior = 0.75,
+                 phi_prior = 0.5,theta_res_prior = 0.5,
                  innov_1 = 0)
             }
 
@@ -977,7 +988,7 @@ for(n in 1:n_mods){
           par_jags <- c("alpha","E_BH_a","ln_BH_a",
                         "beta",
                         "gamma",
-                        "Sp","Rec","tot_ln_Rec","ln_RS",
+                        "Sp","Rec","tot_ln_Rec","ln_RS","tot_Run",
                         "pi_eta","pi_tau",
                         "sigma_r","sigma_s","res_ln_Rec","w","theta_res","phi",
                         "lp_age","lp_esc"
@@ -991,7 +1002,7 @@ for(n in 1:n_mods){
         ## set of multi-covariate models
         cset <- colnames(scl_cvrs_forecast)
         dat_jags$n_cov <- length(cset)
-        dat_jags$mod_cvrs <- scl_cvrs_forecast[, cset]
+        dat_jags$mod_cvrs <- scl_cvrs_forecast[1:(n_yrs-age_min+1), cset]
         
       
         ## fit model & save it
@@ -1004,87 +1015,15 @@ for(n in 1:n_mods){
                            ctrl=mcmc_ctrl
                            )
         saveRDS(mod_fits[[t]], file.path(savedir,paste(model,"_","y",i,".rds",sep = "")))
-        
+        summary_stats<-NULL
+        summary_stats<-sum_stats(mcmclist= mod_fits[[t]])
+        write.csv(summary_stats,file.path(savedir, paste(model,"_","y",i,"_summary_stats.csv",sep = "")))
         c <- c + 1
         t <- t + 1
     }## end if
     
   }##next forecast year(i)
 }## next model(n)
-```
-
-
-Save the output for all of the forecasts.
-
-```{r save_models}
-# save(mod_fits, file = file.path(savedir, "forecasts.rda"))
-```
-
-
-### Model diagnostics
-
-Here is a table of the Gelman & Rubin statistics $(R_{hat})$ for the estimated parameters. Recall that we set an upper threshold of `r Rhat_thresh`, so values larger than that deserve some additional inspection.
-
-```{r diag_BH_MA1_AR1, eval=TRUE}
-## params of interest
-par_conv <- c("alpha","beta",paste0("gamma[",seq(3),"]"),
-              "sigma_r","sigma_s","pi_tau","theta_res",paste0("pi_eta[",seq(A-1),"]"))
-## Gelman-Rubin
-#gelman.diag(mod_fits[[1]][,par_conv])
-## Autocorrelation
-# t(round(autocorr.diag(mod_fits[[1]][,par_conv],
-#                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
-#                       relative=FALSE), 2))
-## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
-fit_bh_cov_MA1_AR1 <- readRDS(file.path(savedir,"IPM_BH_cov_MA1_AR1_y11.rds"))
-my_sso2 <- launch_shinystan(as.shinystan(fit_bh_cov_MA1_AR1))
-summary_stats2<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso2,what=x)))
-colnames(summary_stats2)[1:4]<-c("rhat","neff","mean","sd")
-write.csv(summary_stats2,file.path(savedir,"Summary_stats_AR1_MA1.csv"))
-```
-
-### Model diagnostics
-
-Here is a table of the Gelman & Rubin statistics $(R_{hat})$ for the estimated parameters. Recall that we set an upper threshold of `r Rhat_thresh`, so values larger than that deserve some additional inspection.
-
-```{r diag_BH_AR1, eval=TRUE}
-## params of interest
-par_conv <- c("alpha","beta",paste0("gamma[",seq(3),"]"),
-              "sigma_r","sigma_s","pi_tau","phi",paste0("pi_eta[",seq(A-1),"]"))
-## Gelman-Rubin
-#gelman.diag(mod_fits[[2]][,par_conv])
-## Autocorrelation
-# t(round(autocorr.diag(mod_fits[[2]][,par_conv],
-#                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
-#                       relative=FALSE), 2))
-## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
-fit_bh_cov_AR <- readRDS(file.path(savedir,"IPM_BH_cov_AR_y11.rds"))
-my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR))
-summary_stats1<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso,what=x)))
-colnames(summary_stats1)[1:4]<-c("rhat","neff","mean","sd")
-write.csv(summary_stats1,file.path(savedir,"Summary_stats_AR.csv"))
-```
-
-### Model diagnostics AR1 recruitment residuals
-
-Here is a table of the Gelman & Rubin statistics $(R_{hat})$ for the estimated parameters. Recall that we set an upper threshold of `r Rhat_thresh`, so values larger than that deserve some additional inspection.
-
-```{r diag_BH_AR1_resid, eval=TRUE}
-## params of interest
-par_conv <- c("alpha","beta",paste0("gamma[",seq(3),"]"),
-              "sigma_r","sigma_s","pi_tau","phi",paste0("pi_eta[",seq(A-1),"]"))
-## Gelman-Rubin
-#gelman.diag(mod_fits[[3]][,par_conv])
-## Autocorrelation
-# t(round(autocorr.diag(mod_fits[[3]][,par_conv],
-#                       lags = seq(mcmc_ctrl$thin, 4*mcmc_ctrl$thin, mcmc_ctrl$thin),
-#                       relative=FALSE), 2))
-## Use ShinyStan to look at effective draws, Gelman-Rubin, Autocorrelation
-fit_bh_cov_AR_resid <- readRDS(file.path(savedir,"IPM_BH_cov_AR_resid_y11.rds"))
-my_sso <- launch_shinystan(as.shinystan(fit_bh_cov_AR_resid))
-summary_stats3<-data.frame(lapply(c("rhat","neff","mean","sd","quantiles"),function(x) retrieve(my_sso,what=x)))
-colnames(summary_stats3)[1:4]<-c("rhat","neff","mean","sd")
-write.csv(summary_stats3,file.path(savedir,"Summary_stats_AR_resid.csv"))
 ```
 
 
@@ -1112,40 +1051,43 @@ for(n in 1:n_mods){
   pred_esc <- NULL
   for(i in 1:(n_forecasts)){
     #i <- 1
-  p_dat <- mod_res[[c]][,grep("Sp", colnames(mod_res[[c]]))]
-  p_dat <- round(median(p_dat[,dim(p_dat)[2]]))
+  mod_res<-NULL
+  mod_res<-as.matrix(readRDS(file.path(savedir,paste0(models[c],"_y",i,".rds"))))
+  #p_dat <- mod_res[[c]][,grep("Sp", colnames(mod_res[[c]]))]
+  p_dat <- mod_res[,grep("tot_ln_Rec", colnames(mod_res))]
+  p_dat <- round(median(exp(p_dat[,dim(p_dat)[2]])))
   
   pred_esc[i] <- p_dat
-  
-  c <- c+1
+  #c <- c+1
     
   }
   
-  pred_trs_mod <- pred_esc + dat_harv_forecast$catch
+  pred_trs_mod <- pred_esc #+ dat_harv_forecast$catch #you don't need to add catch in because it is set to 1 for the forecast year
   
   pred_trs <- cbind(pred_trs,pred_trs_mod)
   #names(pred_trs) <- paste(models[n],"_","pred_trs",sep = "")
-
+    c <- c+1
 }
 
 colnames(pred_trs) <- models
 
 ## compute model performance statistics
-Error <- obs_trs - pred_trs
+Error <- pred_trs - obs_trs 
 SE <- Error^2
 PE <- Error/obs_trs
 APE <- abs(PE)
+LAR <- log(obs_trs/pred_trs)
 
 
 RMSE <- apply(SE,2,function(x){sqrt(mean(x))})
 MPE <- apply(PE,2,function(x){mean(x)})
 MAPE <- apply(APE,2,function(x){mean(x)})
+MSA <- apply(LAR,2,function(x){100*(exp(mean(abs(x))-1))})
                 
-model_selection <- cbind(RMSE,MPE,MAPE)
-model_selection <- data.frame(model_selection)
-model_selection[,"RMSE_weight"] <- (1/model_selection[,"RMSE"])/sum(1/model_selection[,"RMSE"])
-
-
+model_selection <- data.frame(RMSE,MPE,MAPE,MSA)
+weights<-apply(model_selection[,!colnames(model_selection)=="MPE"], 2,function(x) (1/x)/sum(1/x))
+colnames(weights)<-paste0(colnames(weights),"_weight")
+model_selection<-data.frame(model_selection,weights)
 ## extract median 2020 forecast from each model
 n_yrs <- length(dat_yrs)
 
@@ -1172,6 +1114,7 @@ model_selection[,"2020_forecast"] <- c(p_dat_AR1MA1_2020[2],p_dat_AR1_2020[2],mo
 weighted_forecast <- sum(model_selection[,"2020_forecast"]*model_selection[,"RMSE_weight"])
 
 print(model_selection)
+print(weighted_forecast)
 ```
 Via `loo()` and `compare()` with full table of results. Note that `elpd_diff` will be negative (positive) if the expected predictive accuracy for the first (second) model is higher.
 
@@ -1218,13 +1161,12 @@ best_fit <- mod_fits[[best_i]]
 These results show that the `r mod_names[best_i,"mod"]` model with `r mod_names[best_i,"error"]` error has the lowest LOOIC value.  All results will be derived from model averaging based on pseudo bayesian model average weights.
 
 
-# Model Selection Via Approximate leave-future-out cross validation
-Description here
+# Model Selection Via Approximate Leave-Future-Out Cross Validation following the methods here: [**link**](https://mc-stan.org/loo/articles/loo2-lfo.html).
 
 ```{r }
 #load complete model fits & model refits with subset data
 loadmodfits<-function(modelnames){
-  mod_fits<-list()
+  mod_fits<-list(NULL)
   for(i in 1:length(modelnames)){
     mod_fits[[i]] <- readRDS(file.path(savedir,paste0("IPM_",modelnames[i],"_y",n_forecasts+1,".rds")))
     #mod_fits[[i]] <- readRDS(file.path(savedir,paste0("fit_",modelnames[i],".rds")))
@@ -1341,20 +1283,21 @@ plot_ks <- function(ks, thres = 0.7,N,L) {
 
 L=N-n_forecasts
 thres=0.7
-N=yr_last-(yr_frst-1)
+N=yr_last-yr_frst+1
 esc_only="No"
-mod_fits<-loadmodfits(modelnames=c("bh_cov_MA1_AR1","bh_cov_AR","bh_cov_AR_resid"))
+userefits="Yes"
+mod_fits<-loadmodfits(modelnames=c("BH_cov_MA1_AR1","BH_cov_AR","BH_cov_AR_resid"))
 
 
-LFO1<-approx_LFO(N=N,L=L,m=1,esc_only=esc_only,mod_fits=mod_fits,userefits="Yes",refitname="BH_cov_MA1_AR1",thres=thres)
+LFO1<-approx_LFO(N=N,L=L,m=1,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname="BH_cov_MA1_AR1",thres=thres)
 # plot_ks(LFO1$ks,N=N,L=L,thres=thres)
 # plot_ks(LFO1$k_LOOIC,N=N,L=L,thres=thres)
 
-LFO2<-approx_LFO(N=N,L=L,m=2,esc_only=esc_only,mod_fits=mod_fits,userefits="Yes",refitname="BH_cov_AR",thres=thres)
+LFO2<-approx_LFO(N=N,L=L,m=2,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname="BH_cov_AR",thres=thres)
 # plot_ks(LFO2$ks, N=N,L=L,thres=thres)
 # plot_ks(LFO2$k_LOOIC, N=N,L=L,thres=thres)
 
-LFO3<-approx_LFO(N=N,L=L,m=3,esc_only=esc_only,mod_fits=mod_fits,userefits="Yes",refitname="BH_cov_AR_resid",thres=thres)
+LFO3<-approx_LFO(N=N,L=L,m=3,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname="BH_cov_AR_resid",thres=thres)
 # plot_ks(LFO3$ks, N=N,L=L,thres=thres)
 # plot_ks(LFO3$k_LOOIC, N=N,L=L,thres=thres)
 
