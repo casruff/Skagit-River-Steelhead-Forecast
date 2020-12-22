@@ -1088,6 +1088,7 @@ model_selection <- data.frame(RMSE,MPE,MAPE,MSA)
 weights<-apply(model_selection[,!colnames(model_selection)=="MPE"], 2,function(x) (1/x)/sum(1/x))
 colnames(weights)<-paste0(colnames(weights),"_weight")
 model_selection<-data.frame(model_selection,weights)
+
 ## extract median 2020 forecast from each model
 n_yrs <- length(dat_yrs)
 
