@@ -943,9 +943,9 @@ Before fitting the model in JAGS, we need to specify the MCMC control parameters
 ## 1. MCMC control params
 mcmc_ctrl <- list(
   chains = 4,
-  length = 2000,#200000,#5e5,
-  burn = 1000,#100000,#2e5,
-  thin = 1#100#400
+  length = 200000,#5e5,
+  burn = 100000,#2e5,
+  thin = 100#400
 )
 ## total number of MCMC samples after burnin
 mcmc_samp <- mcmc_ctrl$length*mcmc_ctrl$chains/mcmc_ctrl$thin
