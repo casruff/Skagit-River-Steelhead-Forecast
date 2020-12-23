@@ -1270,62 +1270,62 @@ weighted_forecast_dist <-(
   f_dat[,2] * model_selection[2,"RMSE_weight"] +
   f_dat[,3] * model_selection[3,"RMSE_weight"]
   )
-weighted_forecast_quantiles<-quantile(weighted_forecast,c(0.025,0.25,0.50,0.75,0.975))
+weighted_forecast_quantiles<-quantile(weighted_forecast_dist,c(0.025,0.25,0.50,0.75,0.975))
 weighted_forecast<-weighted_forecast_quantiles[3]
 print(model_selection)
-print(weighted_forecast)
+print("The model-averaged forecast is:")
+print(weighted_forecast_quantiles)
 
 
 matplot(as.matrix(pred_trs,trs_obs),type="l",lty=c(1:3),col="black",lwd=2,ylab="Catch + Escapement",xaxt="n",ylim=c(min(pred_trs,obs_trs),max(pred_trs,obs_trs)))
 axis(1,1:n_forecasts,(yr_last-n_forecasts+1):(yr_last))
-points(x=1:n_forecasts,y=obs_trs,col="black",cex=1.5,pch=20)
-legend("topright",legend=c(models,"Observed"),lty=c(1:3,NA),col="black",lwd=2,pch=c(NA,NA,NA,20),bty="n")
+points(x=1:n_forecasts,y=obs_trs,cex=1.5,pch=20,col="red")
+legend("topright",legend=c(models,"Observed"),lty=c(1:3,NA),col=c(rep("black",3),"red"),lwd=2,pch=c(NA,NA,NA,20),bty="n",cex=0.6)
 ```
 
 
 Via `loo()` and `compare()` with full table of results. Note that `elpd_diff` will be negative (positive) if the expected predictive accuracy for the first (second) model is higher.
 
 ```{r get_LOOIC_c, warning=FALSE, cache=FALSE}
-LOOIC <- vector("list", n_mods)
-model_indices <- c(11,22,33)
-## extract log densities from JAGS objects
-for(i in 1:n_mods) {
-  #i <- 1
-  ## convert mcmc.list to matrix
-  tmp_lp <- as.matrix(mod_fits[[model_indices[i]]])
-  ## extract pointwise likelihoods
-  tmp_lp <- tmp_lp[,grepl("lp_", colnames(tmp_lp))]
-  ## if numerical underflows, convert -Inf to 5% less than min(likelihood)
-  if(any(is.infinite(tmp_lp))) {
-    tmp_lp[is.infinite(tmp_lp)] <- NA
-    tmp_min <- min(tmp_lp, na.rm = TRUE)
-    tmp_lp[is.na(tmp_lp)] <- tmp_min * 1.05
-  }
-  ## calculate LOOIC
-  LOOIC[[i]] <- loo(tmp_lp)
-}
+# LOOIC <- vector("list", n_mods)
+# model_indices <- c(11,22,33)
+# ## extract log densities from JAGS objects
+# for(i in 1:n_mods) {
+#   #i <- 1
+#   ## convert mcmc.list to matrix
+#   tmp_lp <- as.matrix(mod_fits[[model_indices[i]]])
+#   ## extract pointwise likelihoods
+#   tmp_lp <- tmp_lp[,grepl("lp_", colnames(tmp_lp))]
+#   ## if numerical underflows, convert -Inf to 5% less than min(likelihood)
+#   if(any(is.infinite(tmp_lp))) {
+#     tmp_lp[is.infinite(tmp_lp)] <- NA
+#     tmp_min <- min(tmp_lp, na.rm = TRUE)
+#     tmp_lp[is.na(tmp_lp)] <- tmp_min * 1.05
+#   }
+#   ## calculate LOOIC
+#   LOOIC[[i]] <- loo(tmp_lp)
+# }
+# 
+# ## compute pseudo weights
+# model_weights <- loo_model_weights(LOOIC, method = "pseudobma",optim_method = "BFGS", optim_control = list(), BB = TRUE)
+# 
+# ## LOOIC for all data
+# tbl_LOOIC <- round(loo_compare(x = LOOIC), 2)
+# rownames(tbl_LOOIC) <- sub("model", "", rownames(tbl_LOOIC))
+# tbl_LOOIC <- tbl_LOOIC[order(as.numeric(rownames(tbl_LOOIC))), ]
+# tbl_LOOIC <- cbind(model = c("B-H","B-H","B-H"),
+#                    error = c("MA1_AR1","AR1","AR1_resid"),
+#                    as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights))
+# tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
+# 
+# 
+# ## best model
+# best_i <- which(tbl_LOOIC[,"looic"] == min(tbl_LOOIC[,"looic"]))
+# best_fit <- mod_fits[[best_i]]
 
-## compute pseudo weights
-model_weights <- loo_model_weights(LOOIC, method = "pseudobma",optim_method = "BFGS", optim_control = list(), BB = TRUE)
-
-## LOOIC for all data
-tbl_LOOIC <- round(loo_compare(x = LOOIC), 2)
-rownames(tbl_LOOIC) <- sub("model", "", rownames(tbl_LOOIC))
-tbl_LOOIC <- tbl_LOOIC[order(as.numeric(rownames(tbl_LOOIC))), ]
-tbl_LOOIC <- cbind(model = c("B-H","B-H","B-H"),
-                   error = c("MA1_AR1","AR1","AR1_resid"),
-                   as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights))
-tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
-
-
-## best model
-best_i <- which(tbl_LOOIC[,"looic"] == min(tbl_LOOIC[,"looic"]))
-best_fit <- mod_fits[[best_i]]
-
+#These results show that the `r mod_names[best_i,"mod"]` model with `r #mod_names[best_i,"error"]` error has the lowest LOOIC value.  All results will be #derived from model averaging based on pseudo bayesian model average weights.
 
 ```
-
-These results show that the `r mod_names[best_i,"mod"]` model with `r mod_names[best_i,"error"]` error has the lowest LOOIC value.  All results will be derived from model averaging based on pseudo bayesian model average weights.
 
 
 
@@ -1335,5 +1335,3 @@ These results show that the `r mod_names[best_i,"mod"]` model with `r mod_names[
 <!-- run_time_in_min <- round(((proc.time()-timer_start)/60)["elapsed"], 1) -->
 <!-- cat(run_time_in_min, file = "run_time_in_min.txt") -->
 <!-- ``` -->
-
-
