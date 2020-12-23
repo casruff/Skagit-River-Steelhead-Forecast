@@ -1179,7 +1179,7 @@ for(n in 1:n_mods){
     
   }
   
-  pred_trs_mod <- pred_esc #+ dat_harv_forecast$catch #you don't need to add catch in because it is set to 1 for the forecast year
+  pred_trs_mod <- pred_esc + 1#+ dat_harv_forecast$catch #you don't need to add catch in because it is set to 1 for the forecast year
   
   pred_trs <- cbind(pred_trs,pred_trs_mod)
   #names(pred_trs) <- paste(models[n],"_","pred_trs",sep = "")
