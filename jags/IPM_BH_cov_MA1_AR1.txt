@@ -165,7 +165,7 @@ model {
   for(t in 1:(n_yrs+n_fore)) {
     ## obs model for spawners
     # Sp[t] <- max(10,tot_Run[t] - dat_harv[t]);
-    est_harv[t] = h_rate[t] * tot_Run[t];
+    est_harv[t] = ifelse(t > n_yrs,1,h_rate[t] * tot_Run[t]);
     dat_harv[t] ~ dlnorm(log(est_harv[t]), 20);
     Sp[t] = tot_Run[t] - est_harv[t];
     ln_Sp[t] <- log(Sp[t]);
