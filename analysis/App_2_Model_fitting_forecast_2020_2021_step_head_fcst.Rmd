@@ -1159,9 +1159,7 @@ dat_harv_forecast <- dat_harv[which(dat_harv$year %in% seq(yr_begin,yr_end,1)),]
 ## observed terminal run size
 obs_trs <- dat_esc_forecast$escapement + dat_harv_forecast$catch
 
-mod_res<- do.call("rbind", mod_fits)
 
-c <-1
 pred_trs <- NULL
 for(n in 1:n_mods){
   #n <- 1
@@ -1169,13 +1167,11 @@ for(n in 1:n_mods){
   for(i in 1:(n_forecasts)){
     #i <- 1
   mod_res<-NULL
-  mod_res<-as.matrix(readRDS(file.path(savedir,paste0(models[c],"_y",i,".rds"))))
-  #p_dat <- mod_res[[c]][,grep("Sp", colnames(mod_res[[c]]))]
+  mod_res<-as.matrix(readRDS(file.path(savedir,paste0(models[n],"_y",i,".rds"))))
   p_dat <- mod_res[,grep("Sp", colnames(mod_res))]
   p_dat <- round(median(p_dat[,dim(p_dat)[2]]))
   
   pred_esc[i] <- p_dat
-  #c <- c+1
     
   }
   
@@ -1183,7 +1179,6 @@ for(n in 1:n_mods){
   
   pred_trs <- cbind(pred_trs,pred_trs_mod)
   #names(pred_trs) <- paste(models[n],"_","pred_trs",sep = "")
-    c <- c+1
 }
 
 colnames(pred_trs) <- models
@@ -1287,45 +1282,45 @@ legend("topright",legend=c(models,"Observed"),lty=c(1:3,NA),col=c(rep("black",3)
 Via `loo()` and `compare()` with full table of results. Note that `elpd_diff` will be negative (positive) if the expected predictive accuracy for the first (second) model is higher.
 
 ```{r get_LOOIC_c, warning=FALSE, cache=FALSE}
-# LOOIC <- vector("list", n_mods)
-# model_indices <- c(11,22,33)
-# ## extract log densities from JAGS objects
-# for(i in 1:n_mods) {
-#   #i <- 1
-#   ## convert mcmc.list to matrix
-#   tmp_lp <- as.matrix(mod_fits[[model_indices[i]]])
-#   ## extract pointwise likelihoods
-#   tmp_lp <- tmp_lp[,grepl("lp_", colnames(tmp_lp))]
-#   ## if numerical underflows, convert -Inf to 5% less than min(likelihood)
-#   if(any(is.infinite(tmp_lp))) {
-#     tmp_lp[is.infinite(tmp_lp)] <- NA
-#     tmp_min <- min(tmp_lp, na.rm = TRUE)
-#     tmp_lp[is.na(tmp_lp)] <- tmp_min * 1.05
-#   }
-#   ## calculate LOOIC
-#   LOOIC[[i]] <- loo(tmp_lp)
-# }
-# 
-# ## compute pseudo weights
-# model_weights <- loo_model_weights(LOOIC, method = "pseudobma",optim_method = "BFGS", optim_control = list(), BB = TRUE)
-# 
-# ## LOOIC for all data
-# tbl_LOOIC <- round(loo_compare(x = LOOIC), 2)
-# rownames(tbl_LOOIC) <- sub("model", "", rownames(tbl_LOOIC))
-# tbl_LOOIC <- tbl_LOOIC[order(as.numeric(rownames(tbl_LOOIC))), ]
-# tbl_LOOIC <- cbind(model = c("B-H","B-H","B-H"),
-#                    error = c("MA1_AR1","AR1","AR1_resid"),
-#                    as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights))
-# tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
-# 
-# 
-# ## best model
-# best_i <- which(tbl_LOOIC[,"looic"] == min(tbl_LOOIC[,"looic"]))
-# best_fit <- mod_fits[[best_i]]
+LOOIC <- vector("list", n_mods)
+## extract log densities from JAGS objects
+for(i in 1:n_mods) {
+  #i <- 1
+  ## convert mcmc.list to matrix
+  tmp_lp <- as.matrix(readRDS(file.path(savedir,paste0(models[i],"_y",11,".rds"))))
+  ## extract pointwise likelihoods
+  tmp_lp <- tmp_lp[,grepl("lp_", colnames(tmp_lp))]
+  ## if numerical underflows, convert -Inf to 5% less than min(likelihood)
+  if(any(is.infinite(tmp_lp))) {
+    tmp_lp[is.infinite(tmp_lp)] <- NA
+    tmp_min <- min(tmp_lp, na.rm = TRUE)
+    tmp_lp[is.na(tmp_lp)] <- tmp_min * 1.05
+  }
+  ## calculate LOOIC
+  LOOIC[[i]] <- loo(tmp_lp)
+}
 
-#These results show that the `r mod_names[best_i,"mod"]` model with `r #mod_names[best_i,"error"]` error has the lowest LOOIC value.  All results will be #derived from model averaging based on pseudo bayesian model average weights.
+## compute pseudo weights
+model_weights <- loo_model_weights(LOOIC, method = "pseudobma",optim_method = "BFGS", optim_control = list(), BB = TRUE)
+
+## LOOIC for all data
+tbl_LOOIC <- round(loo_compare(x = LOOIC), 2)
+rownames(tbl_LOOIC) <- sub("model", "", rownames(tbl_LOOIC))
+tbl_LOOIC <- tbl_LOOIC[order(as.numeric(rownames(tbl_LOOIC))), ]
+tbl_LOOIC <- cbind(model = c("B-H","B-H","B-H"),
+                   error = c("MA1_AR1","AR1","AR1_resid"),
+                   as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights))
+tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
+
+
+## best model
+best_i <- which(tbl_LOOIC[,"looic"] == min(tbl_LOOIC[,"looic"]))
+best_fit <- mod_fits[[best_i]]
+
 
 ```
+
+These results show that the `r mod_names[best_i,"mod"]` model with `r mod_names[best_i,"error"]` error has the lowest LOOIC value.  All results will be derived from model averaging based on pseudo bayesian model average weights.
 
 
 
