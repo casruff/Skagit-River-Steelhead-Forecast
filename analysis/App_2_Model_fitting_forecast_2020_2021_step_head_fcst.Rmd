@@ -441,9 +441,9 @@ Before fitting the model in JAGS, we need to specify the MCMC control parameters
 ## 1. MCMC control params
 mcmc_ctrl <- list(
   chains = 4,
-  length = 2000,#200000,#5e5,
-  burn = 1000,#100000,#2e5,
-  thin = 1#100#400
+  length = 4000,#200000,#5e5,
+  burn = 2000,#100000,#2e5,
+  thin = 2#100#400
 )
 ## total number of MCMC samples after burnin
 mcmc_samp <- mcmc_ctrl$length*mcmc_ctrl$chains/mcmc_ctrl$thin
@@ -612,7 +612,7 @@ for(n in 1:n_mods){
                         "Sp","Rec","tot_ln_Rec","ln_RS","tot_Run",
                         "pi_eta","pi_tau",
                         "sigma_r","sigma_s","res_ln_Rec","w","theta_res","phi",
-                        "lp_age","lp_esc"
+                        "lp_age","lp_esc","Run"
                         )
 
           
@@ -760,20 +760,18 @@ rownames(LFOIC_results)<-models
 model_selection<-data.frame(model_selection,LFOIC_results)
 ```
 
-Model Averaging and 2020 forecast
+# Model Averaging and 2020 forecast
 ```{r }
 ## extract median 2020 forecast from each model
-n_yrs <- length(dat_yrs)
-
 f_dat<-data.frame(
-  sort(do.call("c", mod_fits[[1]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
-  sort(do.call("c", mod_fits[[2]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
-  sort(do.call("c", mod_fits[[3]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
-  sort(do.call("c", mod_fits[[4]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
-  sort(do.call("c", mod_fits[[5]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
-  sort(do.call("c", mod_fits[[6]][,paste0("Sp","[",n_yrs+n_fore,"]")]))
+  sort(unlist(mod_fits[[1]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
+  sort(unlist(mod_fits[[2]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
+  sort(unlist(mod_fits[[3]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
+  sort(unlist(mod_fits[[4]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
+  sort(unlist(mod_fits[[5]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
+  sort(unlist(mod_fits[[6]][,paste0("Sp","[",n_yrs+n_fore,"]")]))
 )
-
+colnames(f_dat)<-models
 
 model_selection[,"2020_forecast"] <- apply(f_dat,2,median)
 
@@ -793,6 +791,13 @@ matplot(as.matrix(data.frame(pred_trs,ensemble_median)),type="l",lty=1,col=c(col
 axis(1,1:n_forecasts,(yr_last-n_forecasts+1):(yr_last))
 points(x=1:n_forecasts,y=obs_trs,cex=1.5,pch=20,col="red")
 legend("topright",legend=c(models,"Observed","Ensemble"),lty=c(rep(1,length(models)),NA),col=c(cols,"red","grey40"),lwd=c(rep(2,length(models)),NA,6),pch=c(rep(NA,length(models)),20,NA),bty="n",cex=0.6)
+
+#density plot for final forecasts and ensemble
+res<-apply(f_dat,2,function(x) density(x))
+plot(x=1,y=1,ylim=c(0,0.001),xlim=c(0,10000),ylab="density",xlab="2021 Runsize")
+lapply(res,function(x) lines(x$y~x$x))
+lines(density(weighted_forecast_dist)$y~density(weighted_forecast_dist)$x,lwd=4,col="red")
+legend("topright",legend=c(models,"Ensemble"),lwd=c(rep(1,length(models)),4),col=c(rep("black",length(models)),"red"),bty="n")
 ```
 
 
