@@ -81,6 +81,11 @@ if(!require("rstan")) {
   install.packages("rstan")
   library("rstan")
 }
+if(!require("RColorBrewer")) {
+  install.packages("RColorBrewer")
+  library("RColorBrewer")
+}
+
 ## set directory locations
 datadir <- here("data")
 jagsdir <- here("jags")
@@ -152,7 +157,7 @@ sum_stats<-function(mcmclist){
 loadmodfits<-function(modelnames){
   mod_fits<-list(NULL)
   for(i in 1:length(modelnames)){
-    mod_fits[[i]] <- readRDS(file.path(savedir,paste0("IPM_",modelnames[i],"_y",n_forecasts+1,".rds")))
+    mod_fits[[i]] <- readRDS(file.path(savedir,paste0(modelnames[i],"_y",n_forecasts+1,".rds")))
     #mod_fits[[i]] <- readRDS(file.path(savedir,paste0("fit_",modelnames[i],".rds")))
   }
   return(mod_fits)
@@ -163,7 +168,7 @@ loadrefits<-function(refitname,N,L){
   numrefits<-N-L+1
   re_fits<-list()
   for(i in 1:numrefits){
-     re_fits[[i]] <- readRDS(file.path(savedir,paste0("IPM_",refitname,"_y",i,".rds")))
+     re_fits[[i]] <- readRDS(file.path(savedir,paste0(refitname,"_y",i,".rds")))
   }
   return(re_fits)
 }
@@ -239,7 +244,7 @@ approx_LFO<-function(N=N,L,m=m,esc_only,mod_fits,userefits,refitname,thres){
     #use_refit of model based on the first[i] observations
       i_refit <- i
       refits <- c(refits, i)
-      loglik =  extract_log_lik(m=m, esc_only = esc_only,N=N,mod_fits = re_fits[[(i+1)-L+1]])
+      loglik =  extract_log_lik(m=(i+1)-L+1, esc_only = esc_only,N=N,mod_fits = re_fits)
       approx_elpds_1sap[i + 1] <- log_mean_exp(loglik[, i + 1])
     }else{
       lw <- weights(psis_obj, normalize = TRUE)[, 1]
@@ -260,6 +265,18 @@ plot_ks <- function(ks, thres = 0.7,N,L) {
     scale_color_manual(values = c("cornflowerblue", "darkblue")) + 
     labs(x = "Data point", y = "Pareto k") + 
     ylim(-0.5, max(dat_ks$ks))
+}
+#function for printing out a read text file
+processFile = function(filepath) {
+  con = file(filepath, "r")
+  while ( TRUE ) {
+    line = readLines(con, n = 1)
+    if ( length(line) == 0 ) {
+      break
+    }
+    cat(paste0(noquote(line)),"\n")
+  }
+  close(con)
 }
 ```
 
@@ -396,540 +413,21 @@ dat_cvrs <- read_csv(file.path(datadir, "skagit_sthd_covars.csv"))
 Now we can specify the  model in JAGS. We fit a total one model, which we outline below, based on a beverton holt process model with covariates.
 
 
-## Beverton-Holt with covars 
+## Beverton-Holt with covars and AR1 process errors (MA1 recruitment residuals). Here we will print out the model (contained in a separate text file)
 
 ```{r JAGS_BH_cov2_AR}
-cat("
-    model {
-    
-    ##--------
-    ## PRIORS
-    ##--------
-    ## alpha = intrinsic productivity
-    alpha ~ dnorm(0,0.001) T(0,);
-    mu_BH_a <- log(alpha);
-    E_BH_a <- mu_BH_a + sigma_r/(2 - 2*phi^2);
-    
-    ## strength of dens depend
-    beta_inv ~ dnorm(0, 1e-9) T(0,);
-    beta <- 1/beta_inv;
-    
-    ## covariate effects
-    for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
-    
-    ## AR(1) coef for proc errors
-    #phi ~ dunif(-0.999,0.999);
-    #phi <- 0;
-    phi_prior ~ dbeta(2,2);
-    phi <- phi_prior*2-1;
-    #phi ~ dunif(0,0.999);
-    
-    ## innovation in first year
-    innov_1 ~ dnorm(0,tau_r*(1-phi*phi));
-    
-    ## process variance for recruits model
-    sigma_r ~ dnorm(0, 2e-2) T(0,);
-    tau_r <- 1/sigma_r;
-    
-    ## obs variance for spawners
-    tau_s <- 1/sigma_s;
-    sigma_s ~ dnorm(0, 0.001) T(0,);
-    
-    ## unprojectable early recruits;
-    ## hyper mean across all popns
-    Rec_mu ~ dnorm(0,0.001);
-    ## hyper SD across all popns
-    Rec_sig ~ dunif(0,100);
-    ## precision across all popns
-    Rec_tau <- pow(Rec_sig,-2);
-    ## multipliers for unobservable total runs
-    ttl_run_mu ~ dunif(1,5);
-    ttl_run_tau ~ dunif(1,20);
-    
-    ## get total cal yr returns for first age_min yrs
-    for(i in 1:(age_min+age_skip)) {
-    ln_tot_Run[i] ~ dnorm(ttl_run_mu*Rec_mu,Rec_tau/ttl_run_tau);
-    tot_Run[i] <- exp(ln_tot_Run[i]);
-    }
-    
-    ## maturity schedule
-    ## unif vec for Dirch prior
-    theta <- c(1,10,10,5,1,1)
-    ## hyper-mean for maturity
-    pi_eta ~ ddirch(theta);
-    ## hyper-prec for maturity
-    pi_tau ~ dnorm(0, 0.01) T(0,);
-    for(t in 1:(n_yrs-age_min+n_fore)) { pi_vec[t,1:A] ~ ddirch(pi_eta*pi_tau) }
-    
-    ## estimated harvest rate
-    for(t in 1:(n_yrs+n_fore)) { h_rate[t] ~ dunif(0,1) }
-    ##------------
-    ## LIKELIHOOD
-    ##------------
-    ## predicted recruits in BY t
-    covar[1] <- inprod(gamma,mod_cvrs[1,]);
-    ln_BH_a[1] <- mu_BH_a + covar[1];
-    E_ln_Rec[1] <- ln_BH_a[1] + ln_Sp[1] - log(1 + beta*Sp[1]) + phi*innov_1;
-    tot_ln_Rec[1] ~ dnorm(E_ln_Rec[1],tau_r);
-    res_ln_Rec[1] <- tot_ln_Rec[1] - E_ln_Rec[1];
-    w[1] <- phi * innov_1 + res_ln_Rec[1];
-    
-    ## median of total recruits
-    tot_Rec[1] <- exp(tot_ln_Rec[1]);
-    
-    ## R/S
-    ln_RS[1] <- tot_ln_Rec[1] - ln_Sp[1];
-    
-    ## brood-yr recruits by age
-    for(a in 1:A) {
-    Rec[1,a] <- tot_Rec[1] * pi_vec[1,a];
-    }
-    
-    ## brood years 2:(n_yrs-age_min)
-    for(t in 2:(n_yrs-age_min+n_fore)) {
-    ## predicted recruits in BY t
-    covar[t] <- inprod(gamma, mod_cvrs[t,]);
-    ln_BH_a[t] <- mu_BH_a + covar[t];
-    E_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + phi*res_ln_Rec[t-1];
-    tot_ln_Rec[t] ~ dnorm(E_ln_Rec[t],tau_r);
-    res_ln_Rec[t] <- tot_ln_Rec[t] - E_ln_Rec[t];
-    w[t] <- phi * res_ln_Rec[t-1] + res_ln_Rec[t];
-    
-    ## median of total recruits
-    tot_Rec[t] <- exp(tot_ln_Rec[t]);
-    
-    ## R/S
-    ln_RS[t] <- tot_ln_Rec[t] - ln_Sp[t];
-    
-    ## brood-yr recruits by age
-    for(a in 1:A) {
-    Rec[t,a] <- tot_Rec[t] * pi_vec[t,a];
-    }
-    } ## end t loop over year
-    
-    ## get predicted calendar year returns by age
-    ## matrix Run has dim [(n_yrs-age_min) x A]
-    ## step 1: incomplete early broods
-    ## first cal yr of this grp is first brood yr + age_min + age_skip
-    
-    for(i in 1:(age_max-age_min-age_skip)) {
-    ## projected recruits
-    for(a in 1:(i+age_skip)) {
-    Run[i,a] <- Rec[(age_skip+i)-a+1,a];
-    }
-    
-    ## imputed recruits
-    for(a in (i+1+age_skip):A) {
-    lnRec[i,a] ~ dnorm(Rec_mu,Rec_tau);
-    Run[i,a] <- exp(lnRec[i,a]);
-    }
-    
-    ## total run size
-    tot_Run[i+age_min+age_skip] <- sum(Run[i,1:A]);
-    
-    ## predicted age-prop vec for multinom
-    for(a in 1:A) {
-    age_v[i,a] <- Run[i,a] / tot_Run[i+age_min];
-    }
-    
-    ## multinomial for age comp
-    dat_age[i,1:A] ~ dmulti(age_v[i,1:A],dat_age[i,A+1]);
-    lp_age[i] <- logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]);
-    }
-    
-    ## step 2: info from complete broods
-    ## first cal yr of this grp is first brood yr + age_max
-    for(i in (A-age_skip):(n_yrs-age_min-age_skip+n_fore)) {
-    for(a in 1:A) {
-    Run[i,a] <- Rec[(age_skip+i)-a+1,a];
-    }
-    
-    ## total run size
-    tot_Run[i+age_min+age_skip] <- sum(Run[i,1:A]);
-    
-    ## predicted age-prop vec for multinom
-    for(a in 1:A) {
-    age_v[i,a] <- Run[i,a] / tot_Run[i+age_min];
-    }
-    
-    ## multinomial for age comp
-    dat_age[i,1:A] ~ dmulti(age_v[i,1:A],dat_age[i,A+1]);
-    lp_age[i] <- ifelse(i < n_yrs-age_min-age_skip+n_fore, logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]),0);
-    }
-    
-    ## get predicted calendar year spawners
-    ## first cal yr is first brood yr
-    for(t in 1:(n_yrs+n_fore)) {
-    ## obs model for spawners
-    #Sp[t] <- max(10,tot_Run[t] - dat_harv[t]);
-    est_harv[t] = ifelse(t > n_yrs,1,h_rate[t] * tot_Run[t]);
-    dat_harv[t] ~ dlnorm(log(est_harv[t]), 20);
-    Sp[t] = tot_Run[t] - est_harv[t];
-    ln_Sp[t] <- log(Sp[t]);
-    ln_dat_esc[t] ~ dnorm(ln_Sp[t], tau_s);
-    
-    lp_esc[t] <- ifelse(t < n_yrs + 1,logdensity.norm(ln_dat_esc[t],ln_Sp[t], tau_s),0);
-    }
-  } ## end model description
-    
-  ", file=file.path(jagsdir, "IPM_BH_cov_AR.txt"))
-
+processFile(file.path(jagsdir, "IPM_BH_cov_AR.txt"))
 ```
 
-## Beverton-Holt with covars 
+## Beverton-Holt with covars and AR1MA1 recruitment residuals
 
 ```{r JAGS_BH_cov2_MA1_AR1}
-cat("
-model {
-  
-  ##--------
-  ## PRIORS
-  ##--------
-  ## alpha = intrinsic productivity
-  alpha ~ dnorm(0,0.001) T(0,);
-  mu_BH_a <- log(alpha);
-  E_BH_a <- mu_BH_a + sigma_r/(2 - 2*phi^2);
-  
-  ## strength of dens depend
-  beta_inv ~ dnorm(0, 1e-9) T(0,);
-  beta <- 1/beta_inv;
-  
-  ## covariate effects
-  for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
-
-  ## AR(1) coef for recruitment residual
-  #phi ~ dunif(-0.999,0.999);
-  #phi <- 0;
-  phi_prior ~ dbeta(2,2);
-  phi <- phi_prior*2-1;
-  #phi ~ dunif(0,0.999);
-
-  ## MA(1) coef recruitment residual
-  theta_res_prior ~ dbeta(2,2);
-  theta_res <- theta_res_prior*2-1;
-  #theta_res ~ dunif(0,0.999);
-
-  ## innovation in first year
-  #innov_1 ~ dnorm(0,tau_r*(1-phi*phi));#AR1
-  innov_1 ~ dnorm(0,(1-phi^2)/((1+2*phi*theta_res+theta_res^2)*sigma_r^2));#AR1MA1
-  
-  ## process variance for recruits model
-  sigma_r ~ dnorm(0, 2e-2) T(0,);
-  tau_r <- 1/sigma_r;
-  
-  ## obs variance for spawners
-  tau_s <- 1/sigma_s;
-  sigma_s ~ dnorm(0, 0.001) T(0,);
-  
-  ## unprojectable early recruits;
-  ## hyper mean across all popns
-  Rec_mu ~ dnorm(0,0.001);
-  ## hyper SD across all popns
-  Rec_sig ~ dunif(0,100);
-  ## precision across all popns
-  Rec_tau <- pow(Rec_sig,-2);
-  ## multipliers for unobservable total runs
-	ttl_run_mu ~ dunif(1,5);
-	ttl_run_tau ~ dunif(1,20);
-
-  ## get total cal yr returns for first age_min yrs
-  for(i in 1:(age_min+age_skip)) {
-		ln_tot_Run[i] ~ dnorm(ttl_run_mu*Rec_mu,Rec_tau/ttl_run_tau);
-		tot_Run[i] <- exp(ln_tot_Run[i]);
-  }
-  
-  ## maturity schedule
-  ## unif vec for Dirch prior
-  theta <- c(1,10,10,5,1,1)
-  ## hyper-mean for maturity
-  pi_eta ~ ddirch(theta);
-  ## hyper-prec for maturity
-  pi_tau ~ dnorm(0, 0.01) T(0,);
-  for(t in 1:(n_yrs-age_min+n_fore)) { pi_vec[t,1:A] ~ ddirch(pi_eta*pi_tau) }
-  
-  ## estimated harvest rate
-  for(t in 1:(n_yrs+n_fore)) { h_rate[t] ~ dunif(0,1) }
-
-  ##------------
-  ## LIKELIHOOD
-  ##------------
-  ## predicted recruits in BY t
-  covar[1] <- inprod(gamma,mod_cvrs[1,]);
-  ln_BH_a[1] <- mu_BH_a + covar[1];
-  E_ln_Rec[1] <- ln_BH_a[1] + ln_Sp[1] - log(1 + beta*Sp[1]) + phi * innov_1 + theta_res * 0;
-  tot_ln_Rec[1] ~ dnorm(E_ln_Rec[1], tau_r);
-  res_ln_Rec[1] <- tot_ln_Rec[1] - E_ln_Rec[1];
-  w[1] <- phi * innov_1 + theta_res * 0 + res_ln_Rec[1] 
-    
-  ## median of total recruits
-  tot_Rec[1] <- exp(tot_ln_Rec[1]);
-  
-  ## R/S
-  ln_RS[1] <- tot_ln_Rec[1] - ln_Sp[1];
-  
-  ## brood-yr recruits by age
-  for(a in 1:A) {
-    Rec[1,a] <- tot_Rec[1] * pi_vec[1,a];
-  }
-  
-  ## brood years 2:(n_yrs-age_min)
-  for(t in 2:(n_yrs-age_min+n_fore)) {
-    ## predicted recruits in BY t
-    covar[t] <- inprod(gamma, mod_cvrs[t,]);
-    ln_BH_a[t] <- mu_BH_a + covar[t]; 
-    
-    #=============================================
-    #version 4; more similar to AR1 original model
-    #=============================================
-    E_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + phi * w[t-1] + theta_res * res_ln_Rec[t-1];
-    tot_ln_Rec[t] ~ dnorm(E_ln_Rec[t], tau_r);
-    res_ln_Rec[t] <- tot_ln_Rec[t] - E_ln_Rec[t];
-    w[t] <- phi * w[t-1] + theta_res * res_ln_Rec[t-1] + res_ln_Rec[t]; 
-    
-    
-    ## median of total recruits
-    tot_Rec[t] <- exp(tot_ln_Rec[t]);
-    ## R/S
-    ln_RS[t] <- tot_ln_Rec[t] - ln_Sp[t];
-    ## brood-yr recruits by age
-    for(a in 1:A) {
-      Rec[t,a] <- tot_Rec[t] * pi_vec[t,a];
-    }
-  } ## end t loop over year
-  
-  ## get predicted calendar year returns by age
-  ## matrix Run has dim [(n_yrs-age_min) x A]
-  ## step 1: incomplete early broods
-  ## first cal yr of this grp is first brood yr + age_min + age_skip
-  for(i in 1:(age_max-age_min-age_skip)) {
-    ## projected recruits
-    for(a in 1:(i+age_skip)) {
-      Run[i,a] <- Rec[(age_skip+i)-a+1,a];
-    }
-    ## imputed recruits
-    for(a in (i+1+age_skip):A) {
-      lnRec[i,a] ~ dnorm(Rec_mu,Rec_tau);
-      Run[i,a] <- exp(lnRec[i,a]);
-    }
-    ## total run size
-    tot_Run[i+age_min+age_skip] <- sum(Run[i,1:A]);
-    ## predicted age-prop vec for multinom
-    for(a in 1:A) {
-      age_v[i,a] <- Run[i,a] / tot_Run[i+age_min];
-    }
-    ## multinomial for age comp
-    dat_age[i,1:A] ~ dmulti(age_v[i,1:A],dat_age[i,A+1]);
-    lp_age[i] <- logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]);
-  }
-  
-  ## step 2: info from complete broods
-  ## first cal yr of this grp is first brood yr + age_max
-  for(i in (A-age_skip):(n_yrs-age_min-age_skip+n_fore)) {
-    for(a in 1:A) {
-      Run[i,a] <- Rec[(age_skip+i)-a+1,a];
-    }
-    ## total run size
-    tot_Run[i+age_min+age_skip] <- sum(Run[i,1:A]);
-    ## predicted age-prop vec for multinom
-    for(a in 1:A) {
-      age_v[i,a] <- Run[i,a] / tot_Run[i+age_min];
-    }
-    ## multinomial for age comp
-    dat_age[i,1:A] ~ dmulti(age_v[i,1:A],dat_age[i,A+1]);
-    #lp_age[i] <- logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]);
-    lp_age[i] <- ifelse(i < n_yrs-age_min-age_skip+n_fore,
-    logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]),0)
-  }
-  
-  ## get predicted calendar year spawners
-  ## first cal yr is first brood yr
-  for(t in 1:(n_yrs+n_fore)) {
-    ## obs model for spawners
-    # Sp[t] <- max(10,tot_Run[t] - dat_harv[t]);
-    est_harv[t] = ifelse(t > n_yrs,1,h_rate[t] * tot_Run[t]);
-    dat_harv[t] ~ dlnorm(log(est_harv[t]), 20);
-    Sp[t] = tot_Run[t] - est_harv[t];
-    ln_Sp[t] <- log(Sp[t]);
-    ln_dat_esc[t] ~ dnorm(ln_Sp[t], tau_s);
-    lp_esc[t] <- ifelse(t < n_yrs + 1,logdensity.norm(ln_dat_esc[t],ln_Sp[t], tau_s),0);
-  }
-  
-} ## end model description
-    
-  ", file=file.path(jagsdir, "IPM_BH_cov_MA1_AR1.txt"))
-
+processFile(file.path(jagsdir, "IPM_BH_cov_MA1_AR1.txt"))
 ```
-## Beverton-Holt with covars 
+## Beverton-Holt with covars and AR1 recruitment residuals
 
 ```{r JAGS_BH_cov2_AR1_resid}
-cat("
-model {
-  
-  ##--------
-  ## PRIORS
-  ##--------
-  ## alpha = intrinsic productivity
-  alpha ~ dnorm(0,0.001) T(0,);
-  mu_BH_a <- log(alpha);
-  E_BH_a <- mu_BH_a + sigma_r/(2 - 2*phi^2);
-  
-  ## strength of dens depend
-  beta_inv ~ dnorm(0, 1e-9) T(0,);
-  beta <- 1/beta_inv;
-  
-  ## covariate effects
-  for(i in 1:n_cov) { gamma[i] ~ dnorm(0,0.01) }
-
-  ## AR(1) coef for recruitment residual
-  #phi ~ dunif(-0.999,0.999);
-  #phi <- 0;
-  phi_prior ~ dbeta(2,2);
-  phi <- phi_prior*2-1;
-  #phi ~ dunif(0,0.999);
-
-  ## innovation in first year
-  innov_1 ~ dnorm(0,tau_r*(1-phi*phi));#AR1
-
-  ## process variance for recruits model
-  sigma_r ~ dnorm(0, 2e-2) T(0,);
-  tau_r <- 1/sigma_r;
-  
-  ## obs variance for spawners
-  tau_s <- 1/sigma_s;
-  sigma_s ~ dnorm(0, 0.001) T(0,);
-  
-  ## unprojectable early recruits;
-  ## hyper mean across all popns
-  Rec_mu ~ dnorm(0,0.001);
-  ## hyper SD across all popns
-  Rec_sig ~ dunif(0,100);
-  ## precision across all popns
-  Rec_tau <- pow(Rec_sig,-2);
-  ## multipliers for unobservable total runs
-	ttl_run_mu ~ dunif(1,5);
-	ttl_run_tau ~ dunif(1,20);
-
-  ## get total cal yr returns for first age_min yrs
-  for(i in 1:(age_min+age_skip)) {
-		ln_tot_Run[i] ~ dnorm(ttl_run_mu*Rec_mu,Rec_tau/ttl_run_tau);
-		tot_Run[i] <- exp(ln_tot_Run[i]);
-  }
-  
-  ## maturity schedule
-  ## unif vec for Dirch prior
-  theta <- c(1,10,10,5,1,1)
-  ## hyper-mean for maturity
-  pi_eta ~ ddirch(theta);
-  ## hyper-prec for maturity
-  pi_tau ~ dnorm(0, 0.01) T(0,);
-  for(t in 1:(n_yrs-age_min+n_fore)) { pi_vec[t,1:A] ~ ddirch(pi_eta*pi_tau) }
-  
-  ## estimated harvest rate
-  for(t in 1:(n_yrs+n_fore)) { h_rate[t] ~ dunif(0,1) }
-
-  ##------------
-  ## LIKELIHOOD
-  ##------------
-  ## predicted recruits in BY t
-  covar[1] <- inprod(gamma,mod_cvrs[1,]);
-  ln_BH_a[1] <- mu_BH_a + covar[1];
-  E_ln_Rec[1] <- ln_BH_a[1] + ln_Sp[1] - log(1 + beta*Sp[1]) + phi * innov_1;
-  tot_ln_Rec[1] ~ dnorm(E_ln_Rec[1], tau_r);
-  res_ln_Rec[1] <- tot_ln_Rec[1] - E_ln_Rec[1];
-  w[1] <- phi * innov_1 + res_ln_Rec[1];
-  
-  ## median of total recruits
-  tot_Rec[1] <- exp(tot_ln_Rec[1]);
-  
-  ## R/S
-  ln_RS[1] <- tot_ln_Rec[1] - ln_Sp[1];
-  
-  ## brood-yr recruits by age
-  for(a in 1:A) {
-    Rec[1,a] <- tot_Rec[1] * pi_vec[1,a];
-  }
-  
-  ## brood years 2:(n_yrs-age_min)
-  for(t in 2:(n_yrs-age_min+n_fore)) {
-    ## predicted recruits in BY t
-    covar[t] <- inprod(gamma, mod_cvrs[t,]);
-    ln_BH_a[t] <- mu_BH_a + covar[t]; 
-    E_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + phi * w[t-1];
-    tot_ln_Rec[t] ~ dnorm(E_ln_Rec[t], tau_r);
-    res_ln_Rec[t] <- tot_ln_Rec[t] - E_ln_Rec[t];
-    w[t] <- phi * w[t-1] + res_ln_Rec[t];
-
-    ## median of total recruits
-    tot_Rec[t] <- exp(tot_ln_Rec[t]);
-    ## R/S
-    ln_RS[t] <- tot_ln_Rec[t] - ln_Sp[t];
-    ## brood-yr recruits by age
-    for(a in 1:A) {
-      Rec[t,a] <- tot_Rec[t] * pi_vec[t,a];
-    }
-  } ## end t loop over year
-  
-  ## get predicted calendar year returns by age
-  ## matrix Run has dim [(n_yrs-age_min) x A]
-  ## step 1: incomplete early broods
-  ## first cal yr of this grp is first brood yr + age_min + age_skip
-  for(i in 1:(age_max-age_min-age_skip)) {
-    ## projected recruits
-    for(a in 1:(i+age_skip)) {
-      Run[i,a] <- Rec[(age_skip+i)-a+1,a];
-    }
-    ## imputed recruits
-    for(a in (i+1+age_skip):A) {
-      lnRec[i,a] ~ dnorm(Rec_mu,Rec_tau);
-      Run[i,a] <- exp(lnRec[i,a]);
-    }
-    ## total run size
-    tot_Run[i+age_min+age_skip] <- sum(Run[i,1:A]);
-    ## predicted age-prop vec for multinom
-    for(a in 1:A) {
-      age_v[i,a] <- Run[i,a] / tot_Run[i+age_min];
-    }
-    ## multinomial for age comp
-    dat_age[i,1:A] ~ dmulti(age_v[i,1:A],dat_age[i,A+1]);
-    lp_age[i] <- logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]);
-  }
-  
-  ## step 2: info from complete broods
-  ## first cal yr of this grp is first brood yr + age_max
-  for(i in (A-age_skip):(n_yrs-age_min-age_skip+n_fore)) {
-    for(a in 1:A) {
-      Run[i,a] <- Rec[(age_skip+i)-a+1,a];
-    }
-    ## total run size
-    tot_Run[i+age_min+age_skip] <- sum(Run[i,1:A]);
-    ## predicted age-prop vec for multinom
-    for(a in 1:A) {
-      age_v[i,a] <- Run[i,a] / tot_Run[i+age_min];
-    }
-    ## multinomial for age comp
-    dat_age[i,1:A] ~ dmulti(age_v[i,1:A],dat_age[i,A+1]);
-    #lp_age[i] <- logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]);
-    lp_age[i] <- ifelse(i < n_yrs-age_min-age_skip+n_fore,
-    logdensity.multi(dat_age[i,1:A],age_v[i,1:A],dat_age[i,A+1]),0)
-  }
-  
-  ## get predicted calendar year spawners
-  ## first cal yr is first brood yr
-  for(t in 1:(n_yrs+n_fore)) {
-    ## obs model for spawners
-    # Sp[t] <- max(10,tot_Run[t] - dat_harv[t]);
-    est_harv[t] = ifelse(t > n_yrs,1,h_rate[t] * tot_Run[t]);
-    dat_harv[t] ~ dlnorm(log(est_harv[t]), 20);
-    Sp[t] = tot_Run[t] - est_harv[t];
-    ln_Sp[t] <- log(Sp[t]);
-    ln_dat_esc[t] ~ dnorm(ln_Sp[t], tau_s);
-    lp_esc[t] <- ifelse(t < n_yrs + 1,logdensity.norm(ln_dat_esc[t],ln_Sp[t], tau_s),0);
-  }
-  
-} ## end model description
-    
-  ", file=file.path(jagsdir, "IPM_BH_cov_AR_resid.txt"))
-
+processFile(file.path(jagsdir, "IPM_BH_cov_AR_resid.txt"))
 ```
 
 
@@ -943,9 +441,9 @@ Before fitting the model in JAGS, we need to specify the MCMC control parameters
 ## 1. MCMC control params
 mcmc_ctrl <- list(
   chains = 4,
-  length = 200000,#5e5,
-  burn = 100000,#2e5,
-  thin = 100#400
+  length = 2000,#200000,#5e5,
+  burn = 1000,#100000,#2e5,
+  thin = 1#100#400
 )
 ## total number of MCMC samples after burnin
 mcmc_samp <- mcmc_ctrl$length*mcmc_ctrl$chains/mcmc_ctrl$thin
@@ -958,13 +456,19 @@ timer_start <- proc.time()
 
 
 ```{r jags_IO_base}
+## models
+models <- c("IPM_BH_cov_MA1_AR1",
+            "IPM_BH_cov_AR",
+            "IPM_BH_cov_AR_resid",
+            "IPM_BH_cov_MA1_AR1_age",
+            "IPM_BH_cov_AR_age",
+            "IPM_BH_cov_AR_resid_age"
+            )
 ## empty list for fits
-n_mods <- 3
+n_mods <- length(models)
 ## empty list for fits
 mod_fits <- vector("list", n_mods*(n_forecasts+1))
-## models
-models <- c("IPM_BH_cov_MA1_AR1","IPM_BH_cov_AR","IPM_BH_cov_AR_resid")
-#models <- c("IPM_BH_cov_MA1_AR1","IPM_BH_cov_AR_resid")
+
           
 ## counter to index fitted jags models (33 in total: 3 models x 11 1 year ahead forecasts including upcoming
 ## return year)
@@ -1081,7 +585,7 @@ for(n in 1:n_mods){
                         "Sp","Rec","tot_ln_Rec","ln_RS",
                         "pi_eta","pi_tau",
                         "sigma_r","sigma_s","w","res_ln_Rec",
-                        "lp_age","lp_esc","phi"
+                        "lp_age","lp_esc","phi","Run"
                         )
 
         }else{
@@ -1091,9 +595,9 @@ for(n in 1:n_mods){
                  gamma = rep(0, 3),
                  pi_tau = 10,
                  pi_eta = rep(1,A),
-                 pi_vec = matrix(c(0.01,0.35,0.47,0.15,0.01,0.01),
-                                 n_yrs-age_min+n_fore, A, 
-                                 byrow = TRUE),
+                 # pi_vec = matrix(c(0.01,0.35,0.47,0.15,0.01,0.01),
+                 #                 n_yrs-age_min+n_fore, A, 
+                 #                 byrow = TRUE),
                  Rec_mu = log(1000),
                  Rec_sig = 0.1,
                  tot_ln_Rec = rep(log(1000), n_yrs - age_min + n_fore),
@@ -1209,30 +713,50 @@ model_selection<-data.frame(model_selection,weights)
 ```{r }
 N=yr_last-yr_frst+1
 L=N-n_forecasts
-thres=0.7
+thres=0.1
 esc_only="No"
 userefits="Yes"
-mod_fits<-loadmodfits(modelnames=c("BH_cov_MA1_AR1","BH_cov_AR","BH_cov_AR_resid"))
+mod_fits<-loadmodfits(modelnames=models)
 
 
-LFO1<-approx_LFO(N=N,L=L,m=1,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname="BH_cov_MA1_AR1",thres=thres)
+LFO1<-approx_LFO(N=N,L=L,m=1,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname=models[1],thres=thres)
 # plot_ks(LFO1$ks,N=N,L=L,thres=thres)
 # plot_ks(LFO1$k_LOOIC,N=N,L=L,thres=thres)
 
-LFO2<-approx_LFO(N=N,L=L,m=2,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname="BH_cov_AR",thres=thres)
+LFO2<-approx_LFO(N=N,L=L,m=2,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname=models[2],thres=thres)
 # plot_ks(LFO2$ks, N=N,L=L,thres=thres)
 # plot_ks(LFO2$k_LOOIC, N=N,L=L,thres=thres)
 
-LFO3<-approx_LFO(N=N,L=L,m=3,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname="BH_cov_AR_resid",thres=thres)
+LFO3<-approx_LFO(N=N,L=L,m=3,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname=models[3],thres=thres)
 # plot_ks(LFO3$ks, N=N,L=L,thres=thres)
 # plot_ks(LFO3$k_LOOIC, N=N,L=L,thres=thres)
 
-ELPD<-c(sum(LFO1$LFO,na.rm=T),sum(LFO2$LFO,na.rm=T),sum(LFO3$LFO,na.rm=T))
+LFO4<-approx_LFO(N=N,L=L,m=4,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname=models[4],thres=thres)
+# plot_ks(LFO3$ks, N=N,L=L,thres=thres)
+# plot_ks(LFO3$k_LOOIC, N=N,L=L,thres=thres)
+
+LFO5<-approx_LFO(N=N,L=L,m=5,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname=models[5],thres=thres)
+# plot_ks(LFO3$ks, N=N,L=L,thres=thres)
+# plot_ks(LFO3$k_LOOIC, N=N,L=L,thres=thres)
+
+LFO6<-approx_LFO(N=N,L=L,m=6,esc_only=esc_only,mod_fits=mod_fits,userefits=userefits,refitname=models[6],thres=thres)
+# plot_ks(LFO3$ks, N=N,L=L,thres=thres)
+# plot_ks(LFO3$k_LOOIC, N=N,L=L,thres=thres)
+
+
+
+ELPD<-c(sum(LFO1$LFO,na.rm=T),
+        sum(LFO2$LFO,na.rm=T),
+        sum(LFO3$LFO,na.rm=T),
+        sum(LFO4$LFO,na.rm=T),
+        sum(LFO5$LFO,na.rm=T),
+        sum(LFO6$LFO,na.rm=T)
+        )
 LFOIC<--2*(ELPD)
 delta_LFOIC<-LFOIC-min(LFOIC)
 LFOIC_weight<-exp(ELPD)/sum(exp(ELPD))
 LFOIC_results<-data.frame(ELPD,LFOIC,delta_LFOIC, LFOIC_weight)
-rownames(LFOIC_results)<-c("MA1_AR1","AR1","AR1_resid")
+rownames(LFOIC_results)<-models
 model_selection<-data.frame(model_selection,LFOIC_results)
 ```
 
@@ -1241,41 +765,34 @@ Model Averaging and 2020 forecast
 ## extract median 2020 forecast from each model
 n_yrs <- length(dat_yrs)
 
-fit_bh_cov_MA1_AR1 <- readRDS(file.path(savedir, "IPM_BH_cov_MA1_AR1_y11.rds"))
-fit_bh_cov_AR1 <- readRDS(file.path(savedir, "IPM_BH_cov_AR_y11.rds"))
-fit_bh_cov_resid <- readRDS(file.path(savedir, "IPM_BH_cov_AR_resid_y11.rds"))
+f_dat<-data.frame(
+  sort(do.call("c", mod_fits[[1]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
+  sort(do.call("c", mod_fits[[2]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
+  sort(do.call("c", mod_fits[[3]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
+  sort(do.call("c", mod_fits[[4]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
+  sort(do.call("c", mod_fits[[5]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
+  sort(do.call("c", mod_fits[[6]][,paste0("Sp","[",n_yrs+n_fore,"]")]))
+)
 
-mod_res_MA1_AR1 <- do.call("rbind", fit_bh_cov_MA1_AR1)
-mod_res_AR1 <- do.call("rbind", fit_bh_cov_AR1)
-mod_res_AR1_resid <- do.call("rbind", fit_bh_cov_resid)
-
-
-
-
-p_dat_AR1MA1 <- mod_res_MA1_AR1[,paste0("Sp","[",n_yrs+n_fore,"]")]
-p_dat_AR1 <- mod_res_AR1[,paste0("Sp","[",n_yrs+n_fore,"]")]
-p_dat_AR1_resid <- mod_res_AR1_resid[,paste0("Sp","[",n_yrs+n_fore,"]")]
-
-f_dat<-data.frame(p_dat_AR1MA1,p_dat_AR1,p_dat_AR1_resid)
 
 model_selection[,"2020_forecast"] <- apply(f_dat,2,median)
 
 weighted_forecast_dist <-(
-  f_dat[,1] * model_selection[1,"RMSE_weight"] +
-  f_dat[,2] * model_selection[2,"RMSE_weight"] +
-  f_dat[,3] * model_selection[3,"RMSE_weight"]
-  )
+  as.matrix(f_dat) %*% (as.vector(model_selection[,"RMSE_weight"]))
+)
 weighted_forecast_quantiles<-quantile(weighted_forecast_dist,c(0.025,0.25,0.50,0.75,0.975))
 weighted_forecast<-weighted_forecast_quantiles[3]
 print(model_selection)
 print("The model-averaged forecast is:")
 print(weighted_forecast_quantiles)
 
+ensemble_median<-pred_trs%*%(as.vector(model_selection[,"RMSE_weight"]))
 
-matplot(as.matrix(pred_trs,trs_obs),type="l",lty=c(1:3),col="black",lwd=2,ylab="Catch + Escapement",xaxt="n",ylim=c(min(pred_trs,obs_trs),max(pred_trs,obs_trs)))
+cols<-brewer.pal(length(models),"Spectral")
+matplot(as.matrix(data.frame(pred_trs,ensemble_median)),type="l",lty=1,col=c(cols,"grey40"),lwd=c(rep(2,length(models)),6),ylab="Catch + Escapement",xaxt="n",ylim=c(min(pred_trs,obs_trs),max(pred_trs,obs_trs)))
 axis(1,1:n_forecasts,(yr_last-n_forecasts+1):(yr_last))
 points(x=1:n_forecasts,y=obs_trs,cex=1.5,pch=20,col="red")
-legend("topright",legend=c(models,"Observed"),lty=c(1:3,NA),col=c(rep("black",3),"red"),lwd=2,pch=c(NA,NA,NA,20),bty="n",cex=0.6)
+legend("topright",legend=c(models,"Observed","Ensemble"),lty=c(rep(1,length(models)),NA),col=c(cols,"red","grey40"),lwd=c(rep(2,length(models)),NA,6),pch=c(rep(NA,length(models)),20,NA),bty="n",cex=0.6)
 ```
 
 
@@ -1307,8 +824,7 @@ model_weights <- loo_model_weights(LOOIC, method = "pseudobma",optim_method = "B
 tbl_LOOIC <- round(loo_compare(x = LOOIC), 2)
 rownames(tbl_LOOIC) <- sub("model", "", rownames(tbl_LOOIC))
 tbl_LOOIC <- tbl_LOOIC[order(as.numeric(rownames(tbl_LOOIC))), ]
-tbl_LOOIC <- cbind(model = c("B-H","B-H","B-H"),
-                   error = c("MA1_AR1","AR1","AR1_resid"),
+tbl_LOOIC <- cbind(model = models,
                    as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights))
 tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
 
