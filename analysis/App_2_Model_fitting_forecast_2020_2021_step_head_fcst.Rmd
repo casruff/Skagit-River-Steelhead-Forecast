@@ -585,7 +585,7 @@ for(n in 1:n_mods){
                         "Sp","Rec","tot_ln_Rec","ln_RS",
                         "pi_eta","pi_tau",
                         "sigma_r","sigma_s","w","res_ln_Rec",
-                        "lp_age","lp_esc","phi"
+                        "lp_age","lp_esc","phi","Run"
                         )
 
         }else{
