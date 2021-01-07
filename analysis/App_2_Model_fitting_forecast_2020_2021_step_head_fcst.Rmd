@@ -582,7 +582,7 @@ for(n in 1:n_mods){
           par_jags<- c("alpha","E_BH_a","ln_BH_a",
                         "beta",
                         "gamma",
-                        "Sp","Rec","tot_ln_Rec","ln_RS",
+                        "Sp","Run","Rec","tot_ln_Rec","ln_RS","tot_Run",
                         "pi_eta","pi_tau",
                         "sigma_r","sigma_s","w","res_ln_Rec",
                         "lp_age","lp_esc","phi","Run"
@@ -609,7 +609,7 @@ for(n in 1:n_mods){
           par_jags <- c("alpha","E_BH_a","ln_BH_a",
                         "beta",
                         "gamma",
-                        "Sp","Rec","tot_ln_Rec","ln_RS","tot_Run",
+                        "Sp","Run","Rec","tot_ln_Rec","ln_RS","tot_Run",
                         "pi_eta","pi_tau",
                         "sigma_r","sigma_s","res_ln_Rec","w","theta_res","phi",
                         "lp_age","lp_esc","Run"
@@ -665,27 +665,123 @@ obs_trs <- dat_esc_forecast$escapement + dat_harv_forecast$catch
 
 
 pred_trs <- NULL
+pred_trs_adj <- NULL
 for(n in 1:n_mods){
   #n <- 1
   pred_esc <- NULL
+  pred_esc_adj <- NULL
+  
+  c <- 0
+  f <- 2
+  adj<- NULL
+
   for(i in 1:(n_forecasts)){
     #i <- 1
-  mod_res<-NULL
-  mod_res<-as.matrix(readRDS(file.path(savedir,paste0(models[n],"_y",i,".rds"))))
-  p_dat <- mod_res[,grep("Sp", colnames(mod_res))]
-  p_dat <- round(median(p_dat[,dim(p_dat)[2]]))
-  
-  pred_esc[i] <- p_dat
     
-  }
+    #range of years. Last year in range
+    dat_yrs <- seq(yr_frst,(yr_last - n_forecasts + c),1)
+        
+    ## number of years of data
+    n_yrs <- length(dat_yrs)
+    
+    
+  mod_res<-NULL
+  
+  #model refit and one step ahead forecast
+  mod_res_pred<-as.matrix(readRDS(file.path(savedir,paste0(models[n],"_y",i,".rds"))))
+  
+  #model refit for year i+1 to extract "observed" state
+  mod_res_obs<-as.matrix(readRDS(file.path(savedir,paste0(models[n],"_y",i + 1,".rds"))))
+
+  #
+  p_dat_pred <- mod_res_pred[,grep("Sp", colnames(mod_res_pred))]
+  p_dat_pred <- round(median(p_dat_pred[,n_yrs + 1]))
+  
+  
+  p_dat_obs <- mod_res_obs[,grep("Sp", colnames(mod_res_obs))]
+  p_dat_obs <- round(median(p_dat_obs[,n_yrs + 2])) 
+  
+
+  pred_esc[i] <- p_dat_pred
+    
+  mod_res_pred[,grep("^Run", colnames(mod_res_pred))]
+
+  #take same model and implement sibling adjustment
+  ## forecast for year t  
+  p_dat_pred_adj <- cbind(((mod_res_pred[,paste0("Run","[",n_yrs - age_min + 1,",",1,"]")])),
+                 ((mod_res_pred[,paste0("Run","[",n_yrs - age_min + 1,",",2,"]")])),
+                 ((mod_res_pred[,paste0("Run","[",n_yrs - age_min + 1,",",3,"]")])),
+                 ((mod_res_pred[,paste0("Run","[",n_yrs - age_min + 1,",",4,"]")])),
+                 ((mod_res_pred[,paste0("Run","[",n_yrs - age_min + 1,",",5,"]")])),
+                 ((mod_res_pred[,paste0("Run","[",n_yrs - age_min + 1,",",6,"]")])))
+  
+  
+  
+  p_dat_pred_adj_sum <- apply(p_dat_pred_adj,1,FUN = "sum")
+  median(p_dat_pred_adj_sum)
+  
+  
+  ## observation for year t+1
+  p_dat_obs_adj <- cbind(((mod_res_obs[,paste0("Run","[",n_yrs - age_min,",",1,"]")])),
+                 ((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 1,",",2,"]")])),
+                 ((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 1,",",3,"]")])),
+                 ((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 1,",",4,"]")])),
+                 ((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 1,",",5,"]")])),
+                 ((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 1,",",6,"]")])))
+  
+  
+
+  ## forecast for year t+1 to be adjusted
+  p_dat_pred_t <- cbind(((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 2,",",1,"]")])),
+                 ((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 2,",",2,"]")])),
+                 ((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 2,",",3,"]")])),
+                 ((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 2,",",4,"]")])),
+                 ((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 2,",",5,"]")])),
+                 ((mod_res_obs[,paste0("Run","[",n_yrs - age_min + 2,",",6,"]")])))
+  
+  
+  median(p_dat_obs_adj[,a-1])/median(p_dat_pred_adj[,a-1])
+  
+    
+    p_dat_pred_adj_a <- NULL
+    adj_a <- NULL
+    for (a in 2:A){
+      #a <- 3
+      adj_a[a] <- median(as.vector(p_dat_obs_adj[,a-1])/as.vector(p_dat_pred_adj[,a-1]))
+      p_dat_pred_adj_a_temp <- as.vector(p_dat_pred_t[,a])*(as.vector(p_dat_obs_adj[,a-1])/as.vector(p_dat_pred_adj[,a-1]))
+      p_dat_pred_adj_a <- cbind(p_dat_pred_adj_a,p_dat_pred_adj_a_temp)
+      
+      
+    }
+    
+    adj <- rbind(adj,t(adj_a))
+    p_dat_pred_adj_a <- apply(p_dat_pred_adj_a,1,FUN = sum)
+    
+    pred_esc_adj[f] <- round(median(p_dat_pred_adj_a))
+    #pred_esc_adj[f] <- median(apply(p_dat_pred_t,1,FUN = "sum"))
+
+    
+    f <- f+1
+    c <- c+1
+  }#next forecast
   
   pred_trs_mod <- pred_esc + 1#+ dat_harv_forecast$catch #you don't need to add catch in because it is set to 1 for the forecast year
+  pred_trs_mod_adj <- pred_esc_adj + 1
   
   pred_trs <- cbind(pred_trs,pred_trs_mod)
+  pred_trs_adj <- cbind(pred_trs_adj,pred_trs_mod_adj)
   #names(pred_trs) <- paste(models[n],"_","pred_trs",sep = "")
 }
 
+
+
+
+
+
 colnames(pred_trs) <- models
+colnames(pred_trs_adj) <- paste(models,"_","sib_adjust",sep = "")
+pred_trs_adj <- pred_trs_adj[-11,]
+
 
 ## compute model performance statistics
 Error <- pred_trs - obs_trs 
@@ -704,7 +800,6 @@ model_selection <- data.frame(RMSE,MPE,MAPE,MSA)
 weights<-apply(model_selection[,!colnames(model_selection)=="MPE"], 2,function(x) (1/x)/sum(1/x))
 colnames(weights)<-paste0(colnames(weights),"_weight")
 model_selection<-data.frame(model_selection,weights)
-
 ```
 
 
@@ -786,8 +881,12 @@ print(weighted_forecast_quantiles)
 
 ensemble_median<-pred_trs%*%(as.vector(model_selection[,"RMSE_weight"]))
 
+<<<<<<< Updated upstream
 cols<-brewer.pal(length(models),"Spectral")
 matplot(as.matrix(data.frame(pred_trs,ensemble_median)),type="l",lty=1,col=c(cols,"grey40"),lwd=c(rep(2,length(models)),6),ylab="Catch + Escapement",xaxt="n",ylim=c(min(pred_trs,obs_trs),max(pred_trs,obs_trs)))
+=======
+matplot(as.matrix(pred_trs),type="l",lty=c(1:3),col="black",lwd=2,ylab="Catch + Escapement",xaxt="n",ylim=c(min(pred_trs,obs_trs),max(pred_trs,obs_trs)))
+>>>>>>> Stashed changes
 axis(1,1:n_forecasts,(yr_last-n_forecasts+1):(yr_last))
 points(x=1:n_forecasts,y=obs_trs,cex=1.5,pch=20,col="red")
 legend("topright",legend=c(models,"Observed","Ensemble"),lty=c(rep(1,length(models)),NA),col=c(cols,"red","grey40"),lwd=c(rep(2,length(models)),NA,6),pch=c(rep(NA,length(models)),20,NA),bty="n",cex=0.6)
