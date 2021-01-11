@@ -190,7 +190,7 @@ tbl_LOOIC <- tbl_LOOIC[order(as.numeric(rownames(tbl_LOOIC))), ]
 tbl_LOOIC <- cbind(model = c("B-H","B-H"),
                    error = c("MA1_AR1","AR1"),
                    as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights),forecast = c(p_dat_AR1MA1_2020[2],p_dat_AR1_2020[2]))
-tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
+tbl_LOOIC <- tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
 write.csv(tbl_LOOIC,file.path(savedir,"model_selection_results.csv"))
 
 ```
@@ -453,7 +453,7 @@ t(round(gamma_CI, 2))
 ```
 
 
-## Process errors
+## Recruitment residuals
 
 Here is the time series of the residuals from the process model. They represent the population's productivity after accounting for the effects of density dependence and environmental covariates.
 
@@ -461,29 +461,35 @@ Here is the time series of the residuals from the process model. They represent 
 ## time sequence
 t_idx_a <- seq(yr_frst, length.out = n_yrs-age_min+n_fore)
 ## plot data
-p_dat <- mod_res_MA1_AR1[,grep("res_ln_Rec", colnames(mod_res_MA1_AR1))]*model_weights[1] + mod_res_AR1[,grep("res_ln_Rec", colnames(mod_res_AR1))]*model_weights[2] 
+p_dat_MA1_AR1 <- mod_res_MA1_AR1[,grep("w", colnames(mod_res_MA1_AR1))]
+p_dat_MA1_AR1 <- apply(p_dat_MA1_AR1, 2, quantile, CI_vec)
 
-p_dat <- apply(p_dat, 2, quantile, CI_vec)
-yp_min <- min(p_dat)
-yp_max <- max(p_dat)
+p_dat_AR1 <- mod_res_AR1[,grep("res_ln_Rec", colnames(mod_res_AR1))]
+p_dat_AR1 <- apply(p_dat_AR1, 2, quantile, CI_vec)
+
+
+yp_min <- min(p_dat_AR1)
+yp_max <- max(p_dat_AR1)
 ## plot
 par(mai = c(0.8,0.8,0.1,0.1), omi = c(0,0.2,0.1,0.2))
-plot(t_idx_a, p_dat[3,],
+plot(t_idx_a, p_dat_AR1[3,],
      type = "n",  bty = "L",
      ylim = c(yp_min,yp_max),
      xlab = "Brood year", ylab = "Process error", main = "",
      cex.lab = 1.2)
 abline(h = 0, lty = "dashed")
-polygon(c(t_idx_a, rev(t_idx_a)), c(p_dat[3,], rev(p_dat[1,])),
-        col = clr, border = NA)
-lines(t_idx_a, p_dat[2,], col = "blue3", lwd = 2)
+#polygon(c(t_idx_a, rev(t_idx_a)), c(p_dat[3,], rev(p_dat[1,])),
+#        col = clr, border = NA)
+lines(t_idx_a, p_dat_AR1[2,], col = "blue3", lwd = 2)
+lines(t_idx_a, p_dat_MA1_AR1[2,], col = "black", lwd = 2)
+
 ```
 
 ```{r, echo=FALSE}
 cnt <- cnt + 1
 ```
 
-`r fig_cap(cnt, caption = "Time series of the estimated process errors, which represent the population's productivity after accounting for the effects of density dependence and environmental covariates. The solid line is the median estimate and the shaded region indicates the 95% credible interval.", display = "full")`
+`r fig_cap(cnt, caption = "Time series of the median estimated recruitment residuals for the AR1 process model (blue line) and the AR1MA1 model (black line).", display = "full")`
 
 ## Management reference points
 
