@@ -19,17 +19,18 @@ model {
   ## AR(1) coef for recruitment residual
   #phi ~ dunif(-0.999,0.999);
   #phi <- 0;
-  #phi_prior ~ dbeta(2,2);
-  #phi <- phi_prior*2-1;
-  phi ~ dunif(0,0.999);
+  phi_prior ~ dbeta(2,2);
+  phi <- phi_prior*2-1;
+  #phi ~ dunif(0,0.999);
 
   ## MA(1) coef recruitment residual
-  #theta_res_prior ~ dbeta(2,2);
-  #theta_res <- theta_res_prior*2-1;
-  theta_res ~ dunif(0,0.999);
+  theta_res_prior ~ dbeta(2,2);
+  theta_res <- theta_res_prior*2-1;
+  #theta_res ~ dunif(0,0.999);
 
   ## innovation in first year
-  innov_1 ~ dnorm(0,tau_r*(1-phi*phi));
+  #innov_1 ~ dnorm(0,tau_r*(1-phi*phi));#AR1
+  innov_1 ~ dnorm(0,(1-phi^2)/((1+2*phi*theta_res+theta_res^2)*sigma_r^2));#AR1MA1
   
   ## process variance for recruits model
   sigma_r ~ dnorm(0, 2e-2) T(0,);
@@ -73,10 +74,12 @@ model {
   ##------------
   ## predicted recruits in BY t
   covar[1] <- inprod(gamma,mod_cvrs[1,]);
-  ln_BH_a[1] <- mu_BH_a + covar[1]; 
-  res_ln_Rec[1] <- 0;
-  w[1] <- innov_1;  
-  tot_ln_Rec[1] <- ln_BH_a[1] + ln_Sp[1] - log(1 + beta*Sp[1]) + w[1];
+  ln_BH_a[1] <- mu_BH_a + covar[1];
+  E_ln_Rec[1] <- ln_BH_a[1] + ln_Sp[1] - log(1 + beta*Sp[1]) + phi * innov_1 + theta_res * 0;
+  tot_ln_Rec[1] ~ dnorm(E_ln_Rec[1], tau_r);
+  res_ln_Rec[1] <- tot_ln_Rec[1] - E_ln_Rec[1];
+  w[1] <- phi * innov_1 + theta_res * 0 + res_ln_Rec[1] 
+    
   ## median of total recruits
   tot_Rec[1] <- exp(tot_ln_Rec[1]);
   
@@ -94,24 +97,15 @@ model {
     covar[t] <- inprod(gamma, mod_cvrs[t,]);
     ln_BH_a[t] <- mu_BH_a + covar[t]; 
     
+    #=============================================
+    #version 4; more similar to AR1 original model
+    #=============================================
+    E_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + phi * w[t-1] + theta_res * res_ln_Rec[t-1];
+    tot_ln_Rec[t] ~ dnorm(E_ln_Rec[t], tau_r);
+    res_ln_Rec[t] <- tot_ln_Rec[t] - E_ln_Rec[t];
+    w[t] <- phi * w[t-1] + theta_res * res_ln_Rec[t-1] + res_ln_Rec[t]; 
     
-    #=============================
-    #version 1; fully non-centered
-    #=============================
-    #res_ln_Rec[t] ~ dnorm(0, 1);
-    #w[t] <- phi * w[t-1] + theta_res * res_ln_Rec[t-1] * sigma_r + res_ln_Rec[t] * sigma_r;
-    #=============================
-    #version 2; partially centered (what you ran)
-    #=============================
-    #res_ln_Rec[t] ~ dnorm(0, tau_r);
-    #w[t] <- phi * w[t-1] + theta_res * res_ln_Rec[t-1] + res_ln_Rec[t];
-    #============================
-    #version 3; fully centered
-    #============================
-    w[t] ~ dnorm(phi * w[t-1] + theta_res * res_ln_Rec[t-1], tau_r); 
-    res_ln_Rec[t] <- w[t]-w[t-1];
-
-    tot_ln_Rec[t] <- ln_BH_a[t] + ln_Sp[t] - log(1 + beta*Sp[t]) + w[t];
+    
     ## median of total recruits
     tot_Rec[t] <- exp(tot_ln_Rec[t]);
     ## R/S
@@ -171,7 +165,7 @@ model {
   for(t in 1:(n_yrs+n_fore)) {
     ## obs model for spawners
     # Sp[t] <- max(10,tot_Run[t] - dat_harv[t]);
-    est_harv[t] = h_rate[t] * tot_Run[t];
+    est_harv[t] = ifelse(t > n_yrs,1,h_rate[t] * tot_Run[t]);
     dat_harv[t] ~ dlnorm(log(est_harv[t]), 20);
     Sp[t] = tot_Run[t] - est_harv[t];
     ln_Sp[t] <- log(Sp[t]);

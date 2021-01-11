@@ -476,12 +476,14 @@ plot(t_idx_a, p_dat_AR1[3,],
      type = "n",  bty = "L",
      ylim = c(yp_min,yp_max),
      xlab = "Brood year", ylab = "Process error", main = "",
-     cex.lab = 1.2)
+     cex.lab = 1.2, xaxt = "n")
 abline(h = 0, lty = "dashed")
 #polygon(c(t_idx_a, rev(t_idx_a)), c(p_dat[3,], rev(p_dat[1,])),
 #        col = clr, border = NA)
 lines(t_idx_a, p_dat_AR1[2,], col = "blue3", lwd = 2)
 lines(t_idx_a, p_dat_MA1_AR1[2,], col = "black", lwd = 2)
+
+axis(1, at = seq(1978,2018,1))
 
 ```
 
