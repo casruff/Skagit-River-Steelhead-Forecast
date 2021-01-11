@@ -716,17 +716,23 @@ for(n in 1:n_mods){
   pred_esc <- NULL
   for(i in 1:(n_forecasts)){
     #i <- 1
-  mod_res<-NULL
-  mod_res<-as.matrix(readRDS(file.path(savedir,paste0(models[n],"_y",i,".rds"))))
-  p_dat <- mod_res[,grep("Sp", colnames(mod_res))]
-  p_dat <- round(median(p_dat[,dim(p_dat)[2]]))
+    
+    #range of years. Last year in range
+    dat_yrs <- seq(yr_frst,(yr_last - n_forecasts + c),1)
+        
+    ## number of years of data
+    n_yrs <- length(dat_yrs)
+    
+    mod_res<-NULL
+    mod_res<-as.matrix(readRDS(file.path(savedir,paste0(models[n],"_y",i,".rds"))))
+    p_dat <- mod_res[,grep("Sp", colnames(mod_res))]
+    p_dat <- round(median(p_dat[,dim(p_dat)[2]]))
 
-  pred_esc[i] <- p_dat
+    pred_esc[i] <- p_dat
 
   }
 
   pred_trs_mod <- pred_esc + 1#+ dat_harv_forecast$catch #you don't need to add catch in because it is set to 1 for the forecast year
-
   pred_trs <- cbind(pred_trs,pred_trs_mod)
   #names(pred_trs) <- paste(models[n],"_","pred_trs",sep = "")
 }
@@ -881,6 +887,7 @@ print("The model-averaged forecast is:")
 print(weighted_forecast_quantiles)
 
 ensemble_median<-as.matrix(pred_trs)%*%(as.vector(model_selection[,"LFOIC_weight"]))
+
 
 cols<-brewer.pal(length(models),"Spectral")
 matplot(as.matrix(data.frame(pred_trs,ensemble_median)),type="l",lty=1,col=c(cols,"grey40"),lwd=c(rep(2,length(models)),6),ylab="Catch + Escapement",xaxt="n",ylim=c(min(pred_trs,obs_trs),max(pred_trs,obs_trs)))
