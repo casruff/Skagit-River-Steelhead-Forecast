@@ -636,8 +636,14 @@ dat_cvrs <- read_csv(file.path(datadir, "skagit_sthd_covars.csv"))
 
 # Specifying models in JAGS
 
-Now we can specify the  model in JAGS. We fit a total one model, which we outline below, based on a beverton holt process model with covariates.
-
+Now we can specify the  model in JAGS. We evaluated a total of six different 
+models, which we outline below, based on a beverton holt process model with 
+covariates. Specifically, we evaluated three different methods to model 
+recruitment residuals including a moving average process lagged 1 year (MA1), an
+auto-regressive moving average process lagged 1 year (AR1MA1), and an 
+auto-regressive process lagged 1 year (AR1). In addition, we evaluated two 
+methods for modeling maturation including a mean reverting process, and a random
+walk process. 
 
 ## Beverton-Holt with covars and AR1 process errors (MA1 recruitment residuals). Here we will print out the model (contained in a separate text file)
 
@@ -660,6 +666,7 @@ processFile(file.path(jagsdir, "IPM_BH_cov_AR_resid.txt"))
 ***
 
 # Fitting the models and generating the one year ahead forecasts
+For the most recent 10 years (2011 - 2020), fit the model to data through year t-1 and generate a forecast for year t. 
 
 Before fitting the model in JAGS, we need to specify the MCMC control parameters.
 
@@ -696,6 +703,11 @@ mod_fits <- fit_load_mods(models=models)
 
 
 # Model selection
+We evaluated model performance following three separate approaches outlined 
+below.
+
+## Model selection via root mean squared error (RMSE) and mean absolute percent error (MAPE) model performance statistics. 
+ 
 ```{r get_model_selection, warning=FALSE, cache=FALSE}
 tot_mods <- n_forecasts*n_mods
 
@@ -752,7 +764,8 @@ model_selection<-data.frame(model_selection,weights)
 ```
 
 
-# Model Selection Via Approximate Leave-Future-Out Cross Validation following the methods here: [**link**](https://mc-stan.org/loo/articles/loo2-lfo.html).
+## Model Selection Via Approximate Leave-Future-Out Cross Validation 
+Detailed methods described here: [**link**](https://mc-stan.org/loo/articles/loo2-lfo.html). This approach is better suited to evaluating the predictive performance of Bayesian time series models than the more traditional model performance metrics such as RMSE and MAPE. 
 
 ```{r }
 N=yr_last-yr_frst+1
@@ -817,7 +830,8 @@ stacking_weights<-as.vector(round(unlist(stack_weights[[1]]),4))
 model_selection$stacking_weights<-stacking_weights
 ```
 
-Model Selection Via `loo()` and `compare()` with full table of results. Note that `elpd_diff` will be negative (positive) if the expected predictive accuracy for the first (second) model is higher.
+## Model Selection Via `loo()` and `compare()` with full table of results. 
+Note that `elpd_diff` will be negative (positive) if the expected predictive accuracy for the first (second) model is higher.
 
 ```{r get_LOOIC_c, warning=FALSE, cache=FALSE}
 LOOIC <- vector("list", n_mods)
@@ -856,6 +870,10 @@ model_selection$LOOIC_weight<-round(tbl_LOOIC$LOOIC_weight,4)
 ```
 
 # Model Averaging and 2020 forecast
+Here is weighted average forecast for 2020 based on the model LFOIC weights. We
+also compare predictions for return years 2011 - 2020 generated from each of the
+six models evaluated including an ensemble (weighted) to observed run size.
+
 ```{r }
 ## extract median 2020 forecast from each model
 f_dat<-data.frame(
@@ -897,6 +915,10 @@ legend("topright",legend=c(models,"Ensemble"),lwd=c(rep(1,length(models)),4),col
 ```
 
 # Compare sib adjusted forecasts with unadjusted
+Currently implemented for only two of the six model including the AR1MA1 
+recruitment residuals with random walk maturation and the AR1 recruitment
+residuals with random walk maturation. 
+
 ```{r}
 models=c(
             #"IPM_BH_cov_MA1_AR1",
@@ -1053,6 +1075,8 @@ legend("topright",legend=c(rownames(model_selection),"Observed"),lty=c(rep(1,len
 
 ```
 
+It looks like applying the sibling adjustment improved the forecast for only
+2 of the 10 years and resulted in poorer performance overall. 
 
 <!-- ```{r stop_timer, include = FALSE} -->
 <!-- ## stop timer -->
