@@ -482,7 +482,9 @@ abline(h = 0, lty = "dashed")
 #        col = clr, border = NA)
 lines(t_idx_a, p_dat_AR1[2,], col = "blue3", lwd = 2)
 lines(t_idx_a, p_dat_MA1_AR1[2,], col = "black", lwd = 2)
+
 axis(1, at = seq(1978,2018,1))
+
 ```
 
 ```{r, echo=FALSE}
