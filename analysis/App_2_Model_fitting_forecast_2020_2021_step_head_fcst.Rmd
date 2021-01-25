@@ -873,6 +873,9 @@ model_selection[,"2020_forecast"] <- apply(f_dat,2,median)
 weighted_forecast_dist <-(
   as.matrix(f_dat) %*% (as.vector(model_selection[,"LFOIC_weight"]))
 )
+ensemble_forecast_posterior<-data.frame(weighted_forecast_dist)
+colnames(ensemble_forecast_posterior)<-c("ensemble_forecast_posterior")
+write.csv(ensemble_forecast_posterior,file.path(savedir,"ensemble_forecast_posterior.csv"),row.names = F)
 weighted_forecast_quantiles<-quantile(weighted_forecast_dist,c(0.025,0.25,0.50,0.75,0.975)) 
 weighted_forecast<-weighted_forecast_quantiles[3]
 print(model_selection)
