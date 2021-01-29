@@ -923,7 +923,7 @@ RSdat<-function(var,yrs){
   }
   return(R_mat)
 }
-Sdat<-RSdat(var="Sp",yrs=c(1:(n_yrs+n_fore-3)))
+Sdat<-RSdat(var="Sp",yrs=c(1:(n_yrs+n_fore)))
 Rdat<-exp(RSdat(var="tot_ln_Rec",yrs=c(1:(n_yrs+n_fore-3))))
 RSdat<-exp(RSdat(var="ln_RS",yrs=c(1:(n_yrs+n_fore-3))))
 
@@ -956,6 +956,7 @@ RSdat<-as.data.frame(RSdat)%>%
 ggplot(Sdat,aes(x=year,y=`0.5`))+
   geom_ribbon(aes(ymin = `0.025`, ymax = `0.975`,fill="95%CI"),alpha=0.4)+
   geom_line()+
+  geom_point(dat_esc,mapping=aes(y=escapement,x=year))+
   theme_bw()+
   ylab("Spawners")
 ggplot(Rdat,aes(x=year,y=`0.5`))+
