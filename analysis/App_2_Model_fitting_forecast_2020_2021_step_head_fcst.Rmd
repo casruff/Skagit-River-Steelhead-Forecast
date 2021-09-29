@@ -899,6 +899,79 @@ lines(density(weighted_forecast_dist)$y~density(weighted_forecast_dist)$x,lwd=4,
 legend("topright",legend=c(models,"Ensemble"),lwd=c(rep(1,length(models)),4),col=c(rep("black",length(models)),"red"),bty="n")
 ```
 
+
+Now lets graph model estimated spawners, recruits, and recruits per spawner:
+```{r plot of R_S}
+RSdat<-function(var,yrs){
+  sims<-length(sort(unlist(mod_fits[[1]][,paste0(var,"[",i,"]")])))
+  R_mat<-matrix(NA,ncol=length(yrs),nrow=sims)
+  for(i in 1:length(yrs)){
+    Rdat<-data.frame(
+      sort(unlist(mod_fits[[1]][,paste0(var,"[",min(yrs)+i-1,"]")])),
+      sort(unlist(mod_fits[[2]][,paste0(var,"[",min(yrs)+i-1,"]")])),
+      sort(unlist(mod_fits[[3]][,paste0(var,"[",min(yrs)+i-1,"]")])),
+      sort(unlist(mod_fits[[4]][,paste0(var,"[",min(yrs)+i-1,"]")])),
+      sort(unlist(mod_fits[[5]][,paste0(var,"[",min(yrs)+i-1,"]")])),
+      sort(unlist(mod_fits[[6]][,paste0(var,"[",min(yrs)+i-1,"]")]))
+    )
+    dim(Rdat)
+    weighted_R <-(
+      as.matrix(Rdat) %*% (as.vector(model_selection[,"LFOIC_weight"]))
+    )
+    R_mat[,i]<-weighted_R
+    colnames(R_mat)<-yrs
+  }
+  return(R_mat)
+}
+Sdat<-RSdat(var="Sp",yrs=c(1:(n_yrs+n_fore)))
+Rdat<-exp(RSdat(var="tot_ln_Rec",yrs=c(1:(n_yrs+n_fore-3))))
+RSdat<-exp(RSdat(var="ln_RS",yrs=c(1:(n_yrs+n_fore-3))))
+
+
+library(tidyverse)
+Sdat<-as.data.frame(Sdat)%>%
+  pivot_longer(cols=everything())%>%
+  rename(year=name)%>%
+  group_by(year) %>% 
+  summarise(SpawnerAbundance = quantile(value, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975))%>%
+  mutate(year=as.numeric(year)+yr_frst-1)%>%
+  pivot_wider(names_from = q, values_from = SpawnerAbundance)
+
+Rdat<-as.data.frame(Rdat)%>%
+  pivot_longer(cols=everything())%>%
+  rename(year=name)%>%
+  group_by(year) %>% 
+  summarise(RecruitAbundance = quantile(value, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975))%>%
+  mutate(year=as.numeric(year)+yr_frst-1)%>%
+  pivot_wider(names_from = q, values_from = RecruitAbundance)
+
+RSdat<-as.data.frame(RSdat)%>%
+  pivot_longer(cols=everything())%>%
+  rename(year=name)%>%
+  group_by(year) %>% 
+  summarise(RS = quantile(value, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975))%>%
+  mutate(year=as.numeric(year)+yr_frst-1)%>%
+  pivot_wider(names_from = q, values_from = RS)
+
+ggplot(Sdat,aes(x=year,y=`0.5`))+
+  geom_ribbon(aes(ymin = `0.025`, ymax = `0.975`,fill="95%CI"),alpha=0.4)+
+  geom_line()+
+  geom_point(dat_esc,mapping=aes(y=escapement,x=year))+
+  theme_bw()+
+  ylab("Spawners")
+ggplot(Rdat,aes(x=year,y=`0.5`))+
+  geom_ribbon(aes(ymin = `0.025`, ymax = `0.975`,fill="95%CI"),alpha=0.4)+
+  geom_line()+
+  theme_bw()+
+  ylab("Recruits")
+ggplot(RSdat,aes(x=year,y=`0.5`))+
+  geom_ribbon(aes(ymin = `0.025`, ymax = `0.975`,fill="95%CI"),alpha=0.4)+
+  geom_line()+
+  theme_bw()+
+  ylab("RS")
+```
+
+
 # Compare sib adjusted forecasts with unadjusted
 ```{r}
 models=c(
