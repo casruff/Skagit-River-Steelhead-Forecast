@@ -301,7 +301,7 @@ find_stack_weights<-function(tau,metric,n,initial_weights,preds,obs){
     RMSE <- apply(SE,2,function(x){sqrt(mean(x))})
     MPE <- apply(PE,2,function(x){mean(x)})
     MAPE <- apply(APE,2,function(x){mean(x)})
-    MSA <- apply(LAR,2,function(x){100*(exp(mean(abs(x))-1))})
+    MSA <- apply(LAR,2,function(x){100*(exp(mean(abs(x)))-1)})
     
     if(i==1){
       skill=get(metric)
@@ -755,7 +755,7 @@ LAR <- log(obs_trs/pred_trs)
 RMSE <- apply(SE,2,function(x){sqrt(mean(x))})
 MPE <- apply(PE,2,function(x){mean(x)})
 MAPE <- apply(APE,2,function(x){mean(x)})
-MSA <- apply(LAR,2,function(x){100*(exp(mean(abs(x))-1))})
+MSA <- apply(LAR,2,function(x){100*(exp(median(abs(x)))-1)})
 
 model_selection <- data.frame(RMSE,MPE,MAPE,MSA)
 weights<-apply(model_selection[,!colnames(model_selection)=="MPE"], 2,function(x) (1/x)/sum(1/x))
@@ -891,6 +891,9 @@ model_selection[,"2020_forecast"] <- apply(f_dat,2,median)
 weighted_forecast_dist <-(
   as.matrix(f_dat) %*% (as.vector(model_selection[,"LFOIC_weight"]))
 )
+ensemble_forecast_posterior<-data.frame(weighted_forecast_dist)
+colnames(ensemble_forecast_posterior)<-c("ensemble_forecast_posterior")
+write.csv(ensemble_forecast_posterior,file.path(savedir,"ensemble_forecast_posterior.csv"),row.names = F)
 weighted_forecast_quantiles<-quantile(weighted_forecast_dist,c(0.025,0.25,0.50,0.75,0.975)) 
 weighted_forecast<-weighted_forecast_quantiles[3]
 print(model_selection)
@@ -913,6 +916,79 @@ lapply(res,function(x) lines(x$y~x$x))
 lines(density(weighted_forecast_dist)$y~density(weighted_forecast_dist)$x,lwd=4,col="red")
 legend("topright",legend=c(models,"Ensemble"),lwd=c(rep(1,length(models)),4),col=c(rep("black",length(models)),"red"),bty="n")
 ```
+
+
+Now lets graph model estimated spawners, recruits, and recruits per spawner:
+```{r plot of R_S}
+RSdat<-function(var,yrs){
+  sims<-length(sort(unlist(mod_fits[[1]][,paste0(var,"[",i,"]")])))
+  R_mat<-matrix(NA,ncol=length(yrs),nrow=sims)
+  for(i in 1:length(yrs)){
+    Rdat<-data.frame(
+      sort(unlist(mod_fits[[1]][,paste0(var,"[",min(yrs)+i-1,"]")])),
+      sort(unlist(mod_fits[[2]][,paste0(var,"[",min(yrs)+i-1,"]")])),
+      sort(unlist(mod_fits[[3]][,paste0(var,"[",min(yrs)+i-1,"]")])),
+      sort(unlist(mod_fits[[4]][,paste0(var,"[",min(yrs)+i-1,"]")])),
+      sort(unlist(mod_fits[[5]][,paste0(var,"[",min(yrs)+i-1,"]")])),
+      sort(unlist(mod_fits[[6]][,paste0(var,"[",min(yrs)+i-1,"]")]))
+    )
+    dim(Rdat)
+    weighted_R <-(
+      as.matrix(Rdat) %*% (as.vector(model_selection[,"LFOIC_weight"]))
+    )
+    R_mat[,i]<-weighted_R
+    colnames(R_mat)<-yrs
+  }
+  return(R_mat)
+}
+Sdat<-RSdat(var="Sp",yrs=c(1:(n_yrs+n_fore)))
+Rdat<-exp(RSdat(var="tot_ln_Rec",yrs=c(1:(n_yrs+n_fore-3))))
+RSdat<-exp(RSdat(var="ln_RS",yrs=c(1:(n_yrs+n_fore-3))))
+
+
+library(tidyverse)
+Sdat<-as.data.frame(Sdat)%>%
+  pivot_longer(cols=everything())%>%
+  rename(year=name)%>%
+  group_by(year) %>% 
+  summarise(SpawnerAbundance = quantile(value, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975))%>%
+  mutate(year=as.numeric(year)+yr_frst-1)%>%
+  pivot_wider(names_from = q, values_from = SpawnerAbundance)
+
+Rdat<-as.data.frame(Rdat)%>%
+  pivot_longer(cols=everything())%>%
+  rename(year=name)%>%
+  group_by(year) %>% 
+  summarise(RecruitAbundance = quantile(value, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975))%>%
+  mutate(year=as.numeric(year)+yr_frst-1)%>%
+  pivot_wider(names_from = q, values_from = RecruitAbundance)
+
+RSdat<-as.data.frame(RSdat)%>%
+  pivot_longer(cols=everything())%>%
+  rename(year=name)%>%
+  group_by(year) %>% 
+  summarise(RS = quantile(value, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975))%>%
+  mutate(year=as.numeric(year)+yr_frst-1)%>%
+  pivot_wider(names_from = q, values_from = RS)
+
+ggplot(Sdat,aes(x=year,y=`0.5`))+
+  geom_ribbon(aes(ymin = `0.025`, ymax = `0.975`,fill="95%CI"),alpha=0.4)+
+  geom_line()+
+  geom_point(dat_esc,mapping=aes(y=escapement,x=year))+
+  theme_bw()+
+  ylab("Spawners")
+ggplot(Rdat,aes(x=year,y=`0.5`))+
+  geom_ribbon(aes(ymin = `0.025`, ymax = `0.975`,fill="95%CI"),alpha=0.4)+
+  geom_line()+
+  theme_bw()+
+  ylab("Recruits")
+ggplot(RSdat,aes(x=year,y=`0.5`))+
+  geom_ribbon(aes(ymin = `0.025`, ymax = `0.975`,fill="95%CI"),alpha=0.4)+
+  geom_line()+
+  theme_bw()+
+  ylab("RS")
+```
+
 
 # Compare sib adjusted forecasts with unadjusted
 Currently implemented for only two of the six model including the AR1MA1 
