@@ -491,6 +491,47 @@ cnt <- cnt + 1
 
 `r fig_cap(cnt, caption = "Time series of the median estimated recruitment residuals for the AR1 process model (blue line) and the AR1MA1 model (black line).", display = "full")`
 
+
+## productivity
+
+Here is the time series of the population productivity in units of log of adult recruits per spawner.
+
+```{r fig_6_prod, fig.width = 6, fig.height = 4, fig.pos = "placeHere", fig.align="center"}
+## time sequence
+t_idx_a <- seq(yr_frst, length.out = n_yrs-age_min+n_fore)
+## plot data
+p_dat_MA1_AR1 <- mod_res_MA1_AR1[,grep("ln_RS", colnames(mod_res_MA1_AR1))]
+p_dat_MA1_AR1 <- apply(p_dat_MA1_AR1, 2, quantile, CI_vec)
+
+p_dat_AR1 <- mod_res_AR1[,grep("ln_RS", colnames(mod_res_AR1))]
+p_dat_AR1 <- apply(p_dat_AR1, 2, quantile, CI_vec)
+
+
+yp_min <- min(p_dat_AR1)
+yp_max <- max(p_dat_AR1)
+## plot
+par(mai = c(0.8,0.8,0.1,0.1), omi = c(0,0.2,0.1,0.2))
+plot(t_idx_a, p_dat_AR1[3,],
+     type = "n",  bty = "L",
+     ylim = c(yp_min,yp_max),
+     xlab = "Brood year", ylab = "ln(R/S)", main = "",
+     cex.lab = 1.2, xaxt = "n")
+abline(h = 0, lty = "dashed")
+polygon(c(t_idx_a, rev(t_idx_a)), c(p_dat_MA1_AR1[3,], rev(p_dat_MA1_AR1[1,])),
+        col = clr, border = NA)
+#lines(t_idx_a, p_dat_AR1[2,], col = "blue3", lwd = 2)
+lines(t_idx_a, p_dat_MA1_AR1[2,], col = "blue3", lwd = 2)
+axis(1, at = seq(1978,2018,5))
+```
+
+```{r, echo=FALSE}
+cnt <- cnt + 1
+```
+
+`r fig_cap(cnt, caption = "Time series of population productivity", display = "full")`
+
+
+
 ## Management reference points
 
 Here are a number of management reference points.
@@ -553,7 +594,7 @@ for(i in 1:n_yrs) {
 ```
 
 
-```{r fig_6_ref_pts, fig.width=8, fig.height=4, warning=FALSE, fig.pos = "placeHere", fig.align="center"}
+```{r fig_7_ref_pts, fig.width=8, fig.height=4, warning=FALSE, fig.pos = "placeHere", fig.align="center"}
 layout(matrix(c(2, 1, 4, 3), 2, 2), heights = c(1, 5))
 yoffSet <- 0.10
 yoffSet <- 0.05
