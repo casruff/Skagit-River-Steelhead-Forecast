@@ -1,6 +1,6 @@
 ---
 title: R1. Instructions for retrieving and archiving the environmental covariates.
-subtitle: 2021 - 2022 Skagit River steelhead forecast.
+subtitle: 2022 - 2023 Skagit River steelhead forecast.
 output:
   pdf_document:
     highlight: haddock
@@ -46,7 +46,7 @@ We begin by supplying values for the following parameters, which we use for trim
 ```{r get_user_inputs}
 ## first & last years of fish data
 yr_frst <- 1978
-yr_last <- 2021
+yr_last <- 2022
 
 ## min & max adult ages (years)
 age_min <- 3
