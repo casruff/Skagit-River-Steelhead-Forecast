@@ -721,6 +721,7 @@ obs_trs <- dat_esc_forecast$escapement + dat_harv_forecast$catch
 
 
 pred_trs <- NULL
+pred_trs_post <-  vector("list", n_forecasts)
 for(n in 1:n_mods){
   #n <- 1
   pred_esc <- NULL
@@ -728,11 +729,13 @@ for(n in 1:n_mods){
     #i <- 1
     mod_res<-NULL
     mod_res<-as.matrix(readRDS(file.path(savedir,paste0(models[n],"_y",i,".rds"))))
-    p_dat <- mod_res[,grep("Sp", colnames(mod_res))]
-    p_dat <- round(median(p_dat[,dim(p_dat)[2]]))
+    p_dat_post <- mod_res[,grep("Sp", colnames(mod_res))]
+    p_dat <- round(median(p_dat_post[,dim(p_dat_post)[2]]))
 
+    p_dat_post <- p_dat_post[,dim(p_dat_post)[2]]
     pred_esc[i] <- p_dat
 
+    pred_trs_post[[i]] <- cbind(pred_trs_post[[i]],p_dat_post) 
   }
 
   pred_trs_mod <- pred_esc + 1#+ dat_harv_forecast$catch #you don't need to add catch in because it is set to 1 for the forecast year
@@ -889,8 +892,19 @@ model_selection[,"2022_forecast"] <- apply(f_dat,2,median)
 weighted_forecast_dist <-(
   as.matrix(f_dat) %*% (as.vector(model_selection[,"LFOIC_weight"]))
 )
+
+ensemble_forecast_posterior_retrospective <- cbind(as.matrix(pred_trs_post[[5]]) %*% (as.vector(model_selection[,"LFOIC_weight"])),as.matrix(pred_trs_post[[7]]) %*% (as.vector(model_selection[,"LFOIC_weight"])),as.matrix(pred_trs_post[[8]]) %*% (as.vector(model_selection[,"LFOIC_weight"])),as.matrix(pred_trs_post[[10]]) %*% (as.vector(model_selection[,"LFOIC_weight"])),weighted_forecast_dist)
+colnames(ensemble_forecast_posterior_retrospective)<-c("ensemble_forecast_posterior_2017",
+                                                       "ensemble_forecast_posterior_2019",
+                                                       "ensemble_forecast_posterior_2020",
+                                                       "ensemble_forecast_posterior_2022",
+                                                       "ensemble_forecast_posterior_2023")
+
+
+ensemble_forecast_posterior_retrospective <- data.frame(ensemble_forecast_posterior_retrospective)
 ensemble_forecast_posterior<-data.frame(weighted_forecast_dist)
 colnames(ensemble_forecast_posterior)<-c("ensemble_forecast_posterior")
+write.csv(ensemble_forecast_posterior_retrospective,file.path(savedir,"ensemble_forecast_posterior_retrospective.csv"),row.names = F)
 write.csv(ensemble_forecast_posterior,file.path(savedir,"ensemble_forecast_posterior.csv"),row.names = F)
 weighted_forecast_quantiles<-quantile(weighted_forecast_dist,c(0.025,0.25,0.50,0.75,0.975)) 
 weighted_forecast<-weighted_forecast_quantiles[3]
