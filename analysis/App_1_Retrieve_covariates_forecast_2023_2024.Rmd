@@ -1,6 +1,6 @@
 ---
 title: R1. Instructions for retrieving and archiving the environmental covariates.
-subtitle: 2023 - 2024 Skagit River steelhead forecast.
+subtitle: 2024 - 2025 Skagit River steelhead forecast.
 output:
   pdf_document:
     highlight: haddock
@@ -46,7 +46,7 @@ We begin by supplying values for the following parameters, which we use for trim
 ```{r get_user_inputs}
 ## first & last years of fish data
 yr_frst <- 1978
-yr_last <- 2023
+yr_last <- 2024
 
 ## min & max adult ages (years)
 age_min <- 3
@@ -63,7 +63,7 @@ n_fore <- 1
 
 # Retrieve covariates
 
-Our analysis investigates 4 covariates as possible drivers of the population's instrinic growth rate:
+Our analysis investigates 3 covariates as possible drivers of the population's instrinic growth rate:
 
 1. Maximum river discharge in winter;
 2. Minimum river discharge in summer;
@@ -172,7 +172,7 @@ We used the monthly NPGO data provided by Emanuele Di Lorenzo of the Georgia Ins
 
 ```{r get_NPGO_metadata, cache=TRUE}
 ## URL for NPGO data
-url_NPGO <- "http://www.o3d.org/npgo/npgo.php"
+url_NPGO <- "https://www.o3d.org/npgo/data/NPGO.txt"
 ## raw NPGO data 
 NPGO_raw <- read_lines(url_NPGO)
 ## line with data headers
