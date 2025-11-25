@@ -1,0 +1,806 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+  11pt,
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{5}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\newenvironment{Shaded}{}{}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{#1}}
+\newcommand{\AttributeTok}[1]{#1}
+\newcommand{\BaseNTok}[1]{#1}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.00,0.50,0.50}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{#1}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{#1}}
+\newcommand{\ConstantTok}[1]{#1}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.00,1.00}{#1}}
+\newcommand{\DataTypeTok}[1]{#1}
+\newcommand{\DecValTok}[1]{#1}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{#1}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{#1}
+\newcommand{\FunctionTok}[1]{#1}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{#1}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.00,1.00}{#1}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{#1}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{1.00,0.25,0.00}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{1.00,0.25,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.50,0.50}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.00,0.50,0.50}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.00,0.50,0.50}{#1}}
+\newcommand{\VariableTok}[1]{#1}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.00,0.50,0.50}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.00,0.50,0.00}{\textbf{#1}}}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Appendix S3. Compute model averaged parameter estimates via LOOIC()},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Appendix S3. Compute model averaged parameter estimates via
+LOOIC()}
+\usepackage{etoolbox}
+\makeatletter
+\providecommand{\subtitle}[1]{% add subtitle to \maketitle
+  \apptocmd{\@title}{\par {\large #1 \par}}{}{}
+}
+\makeatother
+\subtitle{2025 - 2026 Skagit River steelhead forecast.}
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+\maketitle
+
+{
+\setcounter{tocdepth}{3}
+\tableofcontents
+}
+\vspace{0.2in}
+
+This is version 0.25.11.25.
+
+\section{Background}\label{background}
+
+This appendix shows how generate model averaged parameter estimates and
+generate figures relevant to the 2025-2026 wild Skagit River steelhead
+forecast. All analyses require the \href{https://cran.r-project.org/}{R
+software} (v3.5 or later), as well as a few packages that are not
+included with the base installation of R.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{require}\NormalTok{(}\StringTok{"readr"}\NormalTok{)) \{}
+  \FunctionTok{install.packages}\NormalTok{(}\StringTok{"readr"}\NormalTok{)}
+  \FunctionTok{library}\NormalTok{(}\StringTok{"readr"}\NormalTok{)}
+\NormalTok{\}}
+\ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{require}\NormalTok{(}\StringTok{"captioner"}\NormalTok{)) \{}
+\NormalTok{  devtools}\SpecialCharTok{::}\FunctionTok{install\_github}\NormalTok{(}\StringTok{"adletaw/captioner"}\NormalTok{)}
+  \FunctionTok{library}\NormalTok{(}\StringTok{"captioner"}\NormalTok{)}
+\NormalTok{\}}
+\ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{require}\NormalTok{(}\StringTok{"coda"}\NormalTok{)) \{}
+  \FunctionTok{install.packages}\NormalTok{(}\StringTok{"coda"}\NormalTok{)}
+  \FunctionTok{library}\NormalTok{(}\StringTok{"coda"}\NormalTok{)}
+\NormalTok{\}}
+\ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{require}\NormalTok{(}\StringTok{"here"}\NormalTok{)) \{}
+  \FunctionTok{install.packages}\NormalTok{(}\StringTok{"here"}\NormalTok{)}
+  \FunctionTok{library}\NormalTok{(}\StringTok{"here"}\NormalTok{)}
+\NormalTok{\}}
+\ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{require}\NormalTok{(}\StringTok{"gsl"}\NormalTok{)) \{}
+  \FunctionTok{install.packages}\NormalTok{(}\StringTok{"gsl"}\NormalTok{)}
+  \FunctionTok{library}\NormalTok{(}\StringTok{"gsl"}\NormalTok{)}
+\NormalTok{\}}
+\ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{require}\NormalTok{(}\StringTok{"loo"}\NormalTok{)) \{}
+  \FunctionTok{install.packages}\NormalTok{(}\StringTok{"loo"}\NormalTok{)}
+  \FunctionTok{library}\NormalTok{(}\StringTok{"loo"}\NormalTok{)}
+\NormalTok{\}}
+
+\DocumentationTok{\#\# set default caption delimter}
+\NormalTok{fig\_cap }\OtherTok{\textless{}{-}} \FunctionTok{captioner}\NormalTok{(}\AttributeTok{infix =} \StringTok{"."}\NormalTok{)}
+
+\DocumentationTok{\#\# set directory locations}
+\NormalTok{datadir }\OtherTok{\textless{}{-}} \FunctionTok{here}\NormalTok{(}\StringTok{"data"}\NormalTok{)}
+\NormalTok{analdir }\OtherTok{\textless{}{-}} \FunctionTok{here}\NormalTok{(}\StringTok{"analysis"}\NormalTok{)}
+\NormalTok{savedir }\OtherTok{\textless{}{-}} \FunctionTok{here}\NormalTok{(}\StringTok{"analysis/cache"}\NormalTok{)}
+
+\DocumentationTok{\#\# better round/floor/ceiling}
+\NormalTok{around }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x, }\AttributeTok{func =} \StringTok{"round"}\NormalTok{, }\AttributeTok{prec =} \DecValTok{1}\NormalTok{) \{}
+  \DocumentationTok{\#\# \textasciigrave{}func\textasciigrave{} can be "round", "floor", or "ceiling"}
+  \DocumentationTok{\#\# \textasciigrave{}prec\textasciigrave{} is desired precision (eg, 0.1 is to nearest tenth)}
+  \ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.double}\NormalTok{(x)) \{}
+    \FunctionTok{stop}\NormalTok{(}\StringTok{"\textasciigrave{}x\textasciigrave{} must be a real number"}\NormalTok{)}
+\NormalTok{  \}}
+  \ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\NormalTok{(func }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(}\StringTok{"round"}\NormalTok{, }\StringTok{"floor"}\NormalTok{, }\StringTok{"ceiling"}\NormalTok{))) \{}
+    \FunctionTok{stop}\NormalTok{(}\StringTok{"\textasciigrave{}func\textasciigrave{} must be }\SpecialCharTok{\textbackslash{}"}\StringTok{round}\SpecialCharTok{\textbackslash{}"}\StringTok{, }\SpecialCharTok{\textbackslash{}"}\StringTok{floor}\SpecialCharTok{\textbackslash{}"}\StringTok{, or }\SpecialCharTok{\textbackslash{}"}\StringTok{ceiling}\SpecialCharTok{\textbackslash{}"}\StringTok{"}\NormalTok{)}
+\NormalTok{  \}}
+  \ControlFlowTok{if}\NormalTok{(prec }\SpecialCharTok{\textless{}=} \DecValTok{0}\NormalTok{) \{}
+    \FunctionTok{stop}\NormalTok{(}\StringTok{"\textasciigrave{}prec\textasciigrave{} cannot be less than or equal to 0"}\NormalTok{)}
+\NormalTok{  \}}
+  \FunctionTok{do.call}\NormalTok{(func, }\FunctionTok{list}\NormalTok{(x }\SpecialCharTok{/}\NormalTok{ prec)) }\SpecialCharTok{*}\NormalTok{ prec}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\section{Load the information}\label{load-the-information}
+
+Here we load in the estimated parameters and states from the selected
+model, as well as the covariates and harvest data and escapement data.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fit\_bh\_cov\_MA1\_AR1 }\OtherTok{\textless{}{-}} \FunctionTok{readRDS}\NormalTok{(}\FunctionTok{file.path}\NormalTok{(savedir, }\StringTok{"IPM\_BH\_cov\_MA1\_AR1\_y11.rds"}\NormalTok{))}
+\NormalTok{fit\_bh\_cov\_AR1 }\OtherTok{\textless{}{-}} \FunctionTok{readRDS}\NormalTok{(}\FunctionTok{file.path}\NormalTok{(savedir, }\StringTok{"IPM\_BH\_cov\_AR\_y11.rds"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# covariate(s)}
+\NormalTok{dat\_cvrs }\OtherTok{\textless{}{-}} \FunctionTok{read\_csv}\NormalTok{(}\FunctionTok{file.path}\NormalTok{(datadir, }\StringTok{"skagit\_sthd\_covars.csv"}\NormalTok{))}
+\DocumentationTok{\#\# total number of covariates}
+\NormalTok{n\_cov }\OtherTok{\textless{}{-}} \FunctionTok{dim}\NormalTok{(dat\_cvrs)[}\DecValTok{2}\NormalTok{] }\SpecialCharTok{{-}} \DecValTok{1}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# escapement}
+\NormalTok{dat\_esc }\OtherTok{\textless{}{-}} \FunctionTok{read\_csv}\NormalTok{(}\FunctionTok{file.path}\NormalTok{(datadir, }\StringTok{"skagit\_sthd\_esc.csv"}\NormalTok{))}
+\DocumentationTok{\#\# log of escapement}
+\NormalTok{ln\_dat\_esc }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\FunctionTok{log}\NormalTok{(dat\_esc}\SpecialCharTok{$}\NormalTok{escapement), }\FunctionTok{rep}\NormalTok{(}\ConstantTok{NA}\NormalTok{, n\_fore))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# harvest}
+\NormalTok{dat\_harv }\OtherTok{\textless{}{-}} \FunctionTok{read\_csv}\NormalTok{(}\FunctionTok{file.path}\NormalTok{(datadir, }\StringTok{"skagit\_sthd\_catch.csv"}\NormalTok{))}
+\DocumentationTok{\#\# drop year col \& first age\_max rows}
+\NormalTok{dat\_harv }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(dat\_harv}\SpecialCharTok{$}\NormalTok{catch, }\FunctionTok{rep}\NormalTok{(}\DecValTok{0}\NormalTok{, n\_fore))}
+\end{Highlighting}
+\end{Shaded}
+
+\section{Main results}\label{main-results}
+
+Call models and compute LOOIC Via \texttt{loo()} and \texttt{compare()}
+with full table of results. Note that \texttt{elpd\_diff} will be
+negative (positive) if the expected predictive accuracy for the first
+(second) model is higher. We estimate pseudo Bayesian model weights for
+the purposes of model averaging. We also need to convert the
+\texttt{mcmc.list} output into a more user-friendly form for plotting,
+etc.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# results}
+\NormalTok{n\_mods }\OtherTok{\textless{}{-}}\DecValTok{2}
+\NormalTok{mod\_res\_MA1\_AR1 }\OtherTok{\textless{}{-}} \FunctionTok{do.call}\NormalTok{(}\StringTok{"rbind"}\NormalTok{, fit\_bh\_cov\_MA1\_AR1)}
+\NormalTok{mod\_res\_AR1 }\OtherTok{\textless{}{-}} \FunctionTok{do.call}\NormalTok{(}\StringTok{"rbind"}\NormalTok{, fit\_bh\_cov\_AR1)}
+
+\NormalTok{mod\_fits }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{(fit\_bh\_cov\_MA1\_AR1,fit\_bh\_cov\_AR1)}
+
+\NormalTok{LOOIC }\OtherTok{\textless{}{-}} \FunctionTok{vector}\NormalTok{(}\StringTok{"list"}\NormalTok{, n\_mods)}
+\DocumentationTok{\#\# extract log densities from JAGS objects}
+\ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\NormalTok{n\_mods) \{}
+  \DocumentationTok{\#\# convert mcmc.list to matrix}
+\NormalTok{  tmp\_lp }\OtherTok{\textless{}{-}} \FunctionTok{as.matrix}\NormalTok{(mod\_fits[[i]])}
+  \DocumentationTok{\#\# extract pointwise likelihoods}
+\NormalTok{  tmp\_lp }\OtherTok{\textless{}{-}}\NormalTok{ tmp\_lp[,}\FunctionTok{grepl}\NormalTok{(}\StringTok{"lp\_"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(tmp\_lp))]}
+  \DocumentationTok{\#\# if numerical underflows, convert {-}Inf to 5\% less than min(likelihood)}
+  \ControlFlowTok{if}\NormalTok{(}\FunctionTok{any}\NormalTok{(}\FunctionTok{is.infinite}\NormalTok{(tmp\_lp))) \{}
+\NormalTok{    tmp\_lp[}\FunctionTok{is.infinite}\NormalTok{(tmp\_lp)] }\OtherTok{\textless{}{-}} \ConstantTok{NA}
+\NormalTok{    tmp\_min }\OtherTok{\textless{}{-}} \FunctionTok{min}\NormalTok{(tmp\_lp, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+\NormalTok{    tmp\_lp[}\FunctionTok{is.na}\NormalTok{(tmp\_lp)] }\OtherTok{\textless{}{-}}\NormalTok{ tmp\_min }\SpecialCharTok{*} \FloatTok{1.05}
+\NormalTok{  \}}
+  \DocumentationTok{\#\# calculate LOOIC}
+\NormalTok{  LOOIC[[i]] }\OtherTok{\textless{}{-}} \FunctionTok{loo}\NormalTok{(tmp\_lp)}
+\NormalTok{\}}
+
+\DocumentationTok{\#\# compute pseudo weights}
+\NormalTok{model\_weights }\OtherTok{\textless{}{-}} \FunctionTok{loo\_model\_weights}\NormalTok{(LOOIC, }\AttributeTok{method =} \StringTok{"pseudobma"}\NormalTok{,}\AttributeTok{optim\_method =} \StringTok{"BFGS"}\NormalTok{, }\AttributeTok{optim\_control =} \FunctionTok{list}\NormalTok{(), }\AttributeTok{BB =} \ConstantTok{TRUE}\NormalTok{)}
+
+
+\DocumentationTok{\#\# extract median 2026 forecast from each model}
+\NormalTok{p\_dat\_AR1MA1 }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}
+ 
+\NormalTok{p\_dat\_AR1MA1 }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(p\_dat\_AR1MA1, }\DecValTok{2}\NormalTok{, quantile, CI\_vec)}
+\NormalTok{p\_dat\_AR1MA1\_2025 }\OtherTok{\textless{}{-}} \FunctionTok{round}\NormalTok{(}\FunctionTok{quantile}\NormalTok{(p\_dat\_AR1MA1[,n\_yrs}\SpecialCharTok{+}\NormalTok{n\_fore],}\AttributeTok{probs =}\NormalTok{ CI\_vec))}
+
+
+\NormalTok{p\_dat\_AR1 }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}
+\NormalTok{p\_dat\_AR1\_2025 }\OtherTok{\textless{}{-}} \FunctionTok{round}\NormalTok{(}\FunctionTok{quantile}\NormalTok{(p\_dat\_AR1[,n\_yrs}\SpecialCharTok{+}\NormalTok{n\_fore],}\AttributeTok{probs =}\NormalTok{ CI\_vec))}
+
+
+\DocumentationTok{\#\# LOOIC for all data}
+\NormalTok{tbl\_LOOIC }\OtherTok{\textless{}{-}} \FunctionTok{round}\NormalTok{(}\FunctionTok{loo\_compare}\NormalTok{(}\AttributeTok{x =}\NormalTok{ LOOIC), }\DecValTok{2}\NormalTok{)}
+\FunctionTok{rownames}\NormalTok{(tbl\_LOOIC) }\OtherTok{\textless{}{-}} \FunctionTok{sub}\NormalTok{(}\StringTok{"model"}\NormalTok{, }\StringTok{""}\NormalTok{, }\FunctionTok{rownames}\NormalTok{(tbl\_LOOIC))}
+\NormalTok{tbl\_LOOIC }\OtherTok{\textless{}{-}}\NormalTok{ tbl\_LOOIC[}\FunctionTok{order}\NormalTok{(}\FunctionTok{as.numeric}\NormalTok{(}\FunctionTok{rownames}\NormalTok{(tbl\_LOOIC))), ]}
+\NormalTok{tbl\_LOOIC }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(}\AttributeTok{model =} \FunctionTok{c}\NormalTok{(}\StringTok{"B{-}H"}\NormalTok{,}\StringTok{"B{-}H"}\NormalTok{),}
+                   \AttributeTok{error =} \FunctionTok{c}\NormalTok{(}\StringTok{"MA1\_AR1"}\NormalTok{,}\StringTok{"AR1"}\NormalTok{),}
+                   \FunctionTok{as.data.frame}\NormalTok{(tbl\_LOOIC),}\AttributeTok{pseudo\_bma\_weight =} \FunctionTok{as.matrix}\NormalTok{(model\_weights),}\AttributeTok{forecast =} \FunctionTok{c}\NormalTok{(p\_dat\_AR1MA1\_2025[}\DecValTok{2}\NormalTok{],p\_dat\_AR1\_2025[}\DecValTok{2}\NormalTok{]))}
+\NormalTok{tbl\_LOOIC }\OtherTok{\textless{}{-}}\NormalTok{ tbl\_LOOIC[}\FunctionTok{order}\NormalTok{(tbl\_LOOIC[,}\StringTok{"looic"}\NormalTok{]), ]}
+\FunctionTok{write.csv}\NormalTok{(tbl\_LOOIC,}\FunctionTok{file.path}\NormalTok{(savedir,}\StringTok{"model\_selection\_results.csv"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Total population size}\label{total-population-size}
+
+Here is our estimate of the total run size (i.e., catch + escapement)
+over time. The black points are the data, the blue line is the median
+posterior estimate, and the shaded region is the 95\% credible interval.
+Note that the y-axis is on a log scale.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{clr }\OtherTok{\textless{}{-}} \FunctionTok{rgb}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{255}\NormalTok{, }\AttributeTok{alpha =} \DecValTok{50}\NormalTok{, }\AttributeTok{maxColorValue =} \DecValTok{255}\NormalTok{)}
+\DocumentationTok{\#\# estimated terminal abundance forecast}
+\NormalTok{p\_dat }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{]}
+
+\NormalTok{p\_dat }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(p\_dat, }\DecValTok{2}\NormalTok{, quantile, CI\_vec)}
+\NormalTok{p\_dat }\OtherTok{\textless{}{-}}\NormalTok{ p\_dat }\SpecialCharTok{+} \FunctionTok{matrix}\NormalTok{(dat\_harv, }\FunctionTok{length}\NormalTok{(CI\_vec), n\_yrs}\SpecialCharTok{+}\NormalTok{n\_fore, }\AttributeTok{byrow =} \ConstantTok{TRUE}\NormalTok{)}
+
+\DocumentationTok{\#\# time seq}
+\NormalTok{t\_idx\_f }\OtherTok{\textless{}{-}} \FunctionTok{seq}\NormalTok{(yr\_frst, }\AttributeTok{length.out =}\NormalTok{ n\_yrs}\SpecialCharTok{+}\NormalTok{n\_fore)}
+\DocumentationTok{\#\# plot}
+\CommentTok{\#yp\_min \textless{}{-} min(p\_dat)}
+\NormalTok{yp\_min }\OtherTok{\textless{}{-}} \FunctionTok{min}\NormalTok{(p\_dat)}
+\NormalTok{yp\_max }\OtherTok{\textless{}{-}} \FunctionTok{max}\NormalTok{(p\_dat)}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mai =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.8}\NormalTok{,}\FloatTok{0.8}\NormalTok{,}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.1}\NormalTok{), }\AttributeTok{omi =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.5}\NormalTok{,}\FloatTok{0.2}\NormalTok{,}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.2}\NormalTok{))}
+\FunctionTok{plot}\NormalTok{(t\_idx\_f, p\_dat[}\DecValTok{3}\NormalTok{,], }\AttributeTok{ylim =} \FunctionTok{c}\NormalTok{(yp\_min,yp\_max), }\AttributeTok{type =} \StringTok{"n"}\NormalTok{,}
+     \AttributeTok{log =} \StringTok{"y"}\NormalTok{, }\AttributeTok{xaxt =} \StringTok{"n"}\NormalTok{, }\AttributeTok{yaxt =} \StringTok{"n"}\NormalTok{, }\AttributeTok{bty =} \StringTok{"L"}\NormalTok{,}
+     \AttributeTok{xlab =} \StringTok{"Year"}\NormalTok{, }\AttributeTok{ylab =} \StringTok{"Run size (Catch + Escapement)"}\NormalTok{, }\AttributeTok{main =} \StringTok{""}\NormalTok{, }\AttributeTok{cex.lab =} \FloatTok{1.2}\NormalTok{)}
+\FunctionTok{polygon}\NormalTok{(}\FunctionTok{c}\NormalTok{(t\_idx\_f, }\FunctionTok{rev}\NormalTok{(t\_idx\_f)), }\FunctionTok{c}\NormalTok{(p\_dat[}\DecValTok{3}\NormalTok{,], }\FunctionTok{rev}\NormalTok{(p\_dat[}\DecValTok{1}\NormalTok{,])),}
+        \AttributeTok{col =}\NormalTok{ clr, }\AttributeTok{border =} \ConstantTok{NA}\NormalTok{)}
+\FunctionTok{lines}\NormalTok{(t\_idx\_f, p\_dat[}\DecValTok{2}\NormalTok{,], }\AttributeTok{col =} \StringTok{"blue3"}\NormalTok{, }\AttributeTok{lwd =} \DecValTok{2}\NormalTok{)}
+\FunctionTok{points}\NormalTok{(t\_idx\_f, }\FunctionTok{exp}\NormalTok{(ln\_dat\_esc) }\SpecialCharTok{+}\NormalTok{ dat\_harv, }\AttributeTok{pch =} \DecValTok{16}\NormalTok{, }\AttributeTok{cex =} \DecValTok{1}\NormalTok{)}
+\FunctionTok{axis}\NormalTok{(}\DecValTok{1}\NormalTok{, }\AttributeTok{at =} \FunctionTok{seq}\NormalTok{(}\DecValTok{1980}\NormalTok{, }\DecValTok{2020}\NormalTok{, }\DecValTok{5}\NormalTok{))}
+\FunctionTok{axis}\NormalTok{(}\DecValTok{2}\NormalTok{, }\AttributeTok{at =} \FunctionTok{c}\NormalTok{(}\DecValTok{4000}\NormalTok{, }\DecValTok{8000}\NormalTok{, }\DecValTok{16000}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics{App_3_Summarize_results_forecast_step_ahead_fcst_files/figure-latex/fig_2_run_size-1} \end{center}
+
+Figure 1: Time series of the estimated total population size (catch plus
+the adults that escaped to spawn). The observed data are the points; the
+solid line is the median estimate and the shaded region indicates the
+95\% credible interval.
+
+\subsection{Spawner-recruit
+relationship}\label{spawner-recruit-relationship}
+
+Here is the relationship between spawner and subsequent recruits (a),
+assuming mean values for all covariates. Gray lines show the median
+relationship for each of the 48 years based on \(a_t\). Note that for
+plotting purposes only in (b) and (c), the density in the largest bin
+for each parameter contains counts for all values greater or equal to
+that. Vertical arrows under the x-axes in (b) and (c) indicate the
+2.5\textsuperscript{th}, 50\textsuperscript{th}, and
+97.5\textsuperscript{th} percentiles.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{layout}\NormalTok{(}\FunctionTok{matrix}\NormalTok{(}\FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{,}\DecValTok{3}\NormalTok{),}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{),}\FunctionTok{c}\NormalTok{(}\DecValTok{3}\NormalTok{,}\DecValTok{2}\NormalTok{),}\FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{))}
+\NormalTok{xoffSet }\OtherTok{\textless{}{-}} \FloatTok{0.05}
+\NormalTok{yoffSet }\OtherTok{\textless{}{-}} \FloatTok{0.03}
+
+\DocumentationTok{\#\# colors for plotting}
+\NormalTok{clr }\OtherTok{\textless{}{-}} \FunctionTok{rgb}\NormalTok{(}\DecValTok{100}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{200}\NormalTok{,}
+           \AttributeTok{alpha =} \FunctionTok{seq}\NormalTok{(}\DecValTok{200}\NormalTok{, }\DecValTok{100}\NormalTok{,}
+                       \AttributeTok{length.out =}\NormalTok{ age\_max}\SpecialCharTok{{-}}\NormalTok{age\_min}\SpecialCharTok{+}\NormalTok{n\_fore),}
+           \AttributeTok{maxColorValue =} \DecValTok{255}\NormalTok{)}
+
+\DocumentationTok{\#\# posterior of spawners}
+\NormalTok{s\_dat }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{]  }
+
+\NormalTok{s\_dat }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(s\_dat, }\DecValTok{2}\NormalTok{, quantile, CI\_vec)}
+\NormalTok{s\_dat }\OtherTok{\textless{}{-}}\NormalTok{ s\_dat[, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{(n\_yrs}\SpecialCharTok{{-}}\NormalTok{age\_min}\SpecialCharTok{+}\NormalTok{n\_fore)]}
+
+\DocumentationTok{\#\# posterior of recruits}
+\NormalTok{r\_dat }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"tot\_ln\_Rec"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"tot\_ln\_Rec"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{]  }
+\NormalTok{r\_dat }\OtherTok{\textless{}{-}} \FunctionTok{exp}\NormalTok{(}\FunctionTok{apply}\NormalTok{(r\_dat, }\DecValTok{2}\NormalTok{, quantile, CI\_vec))}
+
+\DocumentationTok{\#\# median values for a \& b}
+\NormalTok{aa }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"ln\_BH\_a"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"ln\_BH\_a"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{] }
+\NormalTok{aa }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(aa, }\DecValTok{2}\NormalTok{, median)}
+
+\NormalTok{bb }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"beta"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"beta"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{] }
+\NormalTok{bb }\OtherTok{\textless{}{-}} \FunctionTok{median}\NormalTok{(bb)}
+
+\DocumentationTok{\#\# empty plot space for spawner{-}recruit relationships}
+\NormalTok{dd }\OtherTok{\textless{}{-}} \DecValTok{3000}
+\NormalTok{yM }\OtherTok{\textless{}{-}} \FunctionTok{around}\NormalTok{(}\FunctionTok{max}\NormalTok{(r\_dat), }\StringTok{"ceiling"}\NormalTok{, dd)}
+\NormalTok{xM }\OtherTok{\textless{}{-}} \FunctionTok{around}\NormalTok{(}\FunctionTok{max}\NormalTok{(s\_dat), }\StringTok{"ceiling"}\NormalTok{, dd)}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mai =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.8}\NormalTok{,}\FloatTok{0.8}\NormalTok{,}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.1}\NormalTok{), }\AttributeTok{omi =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{0}\NormalTok{,}\DecValTok{0}\NormalTok{,}\DecValTok{0}\NormalTok{))}
+\FunctionTok{plot}\NormalTok{(s\_dat[}\DecValTok{2}\NormalTok{,], r\_dat[}\DecValTok{2}\NormalTok{,], }\AttributeTok{xlim =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,xM), }\AttributeTok{ylim =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,yM), }\AttributeTok{type =} \StringTok{"n"}\NormalTok{,}
+     \AttributeTok{xaxs =} \StringTok{"i"}\NormalTok{, }\AttributeTok{yaxs =} \StringTok{"i"}\NormalTok{, }\AttributeTok{cex.lab =} \FloatTok{1.2}\NormalTok{,}
+     \AttributeTok{xlab =} \FunctionTok{expression}\NormalTok{(Spawners}\SpecialCharTok{\textasciitilde{}}\NormalTok{(}\DecValTok{10}\SpecialCharTok{\^{}}\DecValTok{3}\NormalTok{)),}
+     \AttributeTok{ylab =} \FunctionTok{expression}\NormalTok{(Recruits}\SpecialCharTok{\textasciitilde{}}\NormalTok{(}\DecValTok{10}\SpecialCharTok{\^{}}\DecValTok{3}\NormalTok{)),}
+     \AttributeTok{xaxt =} \StringTok{"n"}\NormalTok{, }\AttributeTok{yaxt =} \StringTok{"n"}\NormalTok{, }\AttributeTok{bty=}\StringTok{"L"}\NormalTok{)}
+\FunctionTok{axis}\NormalTok{(}\DecValTok{1}\NormalTok{, }\AttributeTok{at =} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{,xM,dd}\SpecialCharTok{*}\DecValTok{2}\NormalTok{), }\AttributeTok{labels =} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{,xM,dd}\SpecialCharTok{*}\DecValTok{2}\NormalTok{)}\SpecialCharTok{/}\DecValTok{1000}\NormalTok{)}
+\FunctionTok{axis}\NormalTok{(}\DecValTok{2}\NormalTok{, }\AttributeTok{at =} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{,yM,dd}\SpecialCharTok{*}\DecValTok{2}\NormalTok{), }\AttributeTok{labels =} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{,yM,dd}\SpecialCharTok{*}\DecValTok{2}\NormalTok{)}\SpecialCharTok{/}\DecValTok{1000}\NormalTok{, }\AttributeTok{las=}\DecValTok{1}\NormalTok{)}
+\ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\FunctionTok{length}\NormalTok{(aa)) \{}
+  \FunctionTok{lines}\NormalTok{(}\FunctionTok{exp}\NormalTok{(aa[i]) }\SpecialCharTok{*} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{,xM) }\SpecialCharTok{/}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{+}\NormalTok{ bb }\SpecialCharTok{*} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{,xM)),}
+        \AttributeTok{col =} \StringTok{"darkgray"}\NormalTok{)}
+\NormalTok{\}}
+\FunctionTok{abline}\NormalTok{(}\AttributeTok{a =} \DecValTok{0}\NormalTok{,}\AttributeTok{b =} \DecValTok{1}\NormalTok{,}\AttributeTok{lty =} \StringTok{"dashed"}\NormalTok{)}
+
+\DocumentationTok{\#\# add S{-}R estimates and medians}
+\NormalTok{nCB }\OtherTok{\textless{}{-}}\NormalTok{ n\_yrs}\SpecialCharTok{{-}}\NormalTok{age\_max}
+\DocumentationTok{\#\# years with complete returns}
+\FunctionTok{points}\NormalTok{(s\_dat[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{nCB], r\_dat[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{nCB],}
+       \AttributeTok{xlim =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,xM), }\AttributeTok{ylim =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,yM),}
+       \AttributeTok{pch =} \DecValTok{16}\NormalTok{, }\AttributeTok{col =} \StringTok{"blue3"}\NormalTok{)}
+\FunctionTok{segments}\NormalTok{(s\_dat[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{nCB], r\_dat[}\DecValTok{1}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{nCB],}
+\NormalTok{         s\_dat[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{nCB], r\_dat[}\DecValTok{3}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{nCB],}
+         \AttributeTok{col =} \StringTok{"blue3"}\NormalTok{)}
+\FunctionTok{segments}\NormalTok{(s\_dat[}\DecValTok{1}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{nCB], r\_dat[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{nCB],}
+\NormalTok{         s\_dat[}\DecValTok{3}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{nCB], r\_dat[}\DecValTok{2}\NormalTok{, }\DecValTok{1}\SpecialCharTok{:}\NormalTok{nCB],}
+         \AttributeTok{col =} \StringTok{"blue3"}\NormalTok{)}
+\NormalTok{nTB }\OtherTok{\textless{}{-}} \FunctionTok{dim}\NormalTok{(s\_dat)[}\DecValTok{2}\NormalTok{]}
+\DocumentationTok{\#\# years with incomplete returns}
+\FunctionTok{segments}\NormalTok{(s\_dat[}\DecValTok{2}\NormalTok{, (nCB}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{nTB], r\_dat[}\DecValTok{1}\NormalTok{, (nCB}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{nTB],}
+\NormalTok{         s\_dat[}\DecValTok{2}\NormalTok{, (nCB}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{nTB], r\_dat[}\DecValTok{3}\NormalTok{, (nCB}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{nTB],}
+         \AttributeTok{col =}\NormalTok{ clr)}
+\FunctionTok{segments}\NormalTok{(s\_dat[}\DecValTok{1}\NormalTok{, (nCB}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{nTB], r\_dat[}\DecValTok{2}\NormalTok{, (nCB}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{nTB],}
+\NormalTok{         s\_dat[}\DecValTok{3}\NormalTok{, (nCB}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{nTB], r\_dat[}\DecValTok{2}\NormalTok{, (nCB}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{nTB],}
+         \AttributeTok{col =}\NormalTok{ clr)}
+\FunctionTok{points}\NormalTok{(s\_dat[}\DecValTok{2}\NormalTok{, (nCB}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{nTB],r\_dat[}\DecValTok{2}\NormalTok{, (nCB}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{nTB],}
+       \AttributeTok{xlim =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,xM), }\AttributeTok{ylim =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,yM),}
+       \AttributeTok{pch =} \DecValTok{16}\NormalTok{, }\AttributeTok{col =}\NormalTok{ clr)}
+\FunctionTok{text}\NormalTok{(}\AttributeTok{x =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+} \FunctionTok{diff}\NormalTok{(}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{2}\NormalTok{]) }\SpecialCharTok{*}\NormalTok{ xoffSet,}
+     \AttributeTok{y =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{4}\NormalTok{] }\SpecialCharTok{{-}} \FunctionTok{diff}\NormalTok{(}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\SpecialCharTok{:}\DecValTok{4}\NormalTok{]) }\SpecialCharTok{*}\NormalTok{ yoffSet,}
+     \StringTok{"(a)"}\NormalTok{)}
+
+\DocumentationTok{\#\# posterior for alpha}
+\NormalTok{clr }\OtherTok{\textless{}{-}} \FunctionTok{rgb}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{255}\NormalTok{, }\AttributeTok{alpha =} \DecValTok{50}\NormalTok{, }\AttributeTok{maxColorValue =} \DecValTok{255}\NormalTok{)}
+\NormalTok{a\_thresh }\OtherTok{\textless{}{-}} \DecValTok{59}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mai =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.8}\NormalTok{,}\FloatTok{0.4}\NormalTok{,}\FloatTok{0.3}\NormalTok{,}\FloatTok{0.1}\NormalTok{))}
+\DocumentationTok{\#\# B{-}H alpha}
+\NormalTok{R\_alpha\_est }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"alpha"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"alpha"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{] }
+\NormalTok{alphaCI }\OtherTok{\textless{}{-}} \FunctionTok{quantile}\NormalTok{(R\_alpha\_est, CI\_vec)}
+\NormalTok{R\_alpha\_est[R\_alpha\_est }\SpecialCharTok{\textgreater{}}\NormalTok{ a\_thresh] }\OtherTok{\textless{}{-}}\NormalTok{ a\_thresh}
+\FunctionTok{hist}\NormalTok{(R\_alpha\_est, }\AttributeTok{freq =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{breaks =} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{, a\_thresh}\SpecialCharTok{+}\DecValTok{1}\NormalTok{, }\DecValTok{2}\NormalTok{),}
+     \AttributeTok{col =}\NormalTok{ clr, }\AttributeTok{border =} \StringTok{"blue3"}\NormalTok{,}
+     \AttributeTok{xlab =} \StringTok{""}\NormalTok{, }\AttributeTok{ylab =} \StringTok{""}\NormalTok{, }\AttributeTok{main =} \StringTok{""}\NormalTok{, }\AttributeTok{cex.lab =} \FloatTok{1.2}\NormalTok{, }\AttributeTok{yaxt =} \StringTok{"n"}\NormalTok{)}
+\NormalTok{aHt }\OtherTok{\textless{}{-}}\NormalTok{ (}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{4}\NormalTok{]}\SpecialCharTok{{-}}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\NormalTok{])}\SpecialCharTok{/}\DecValTok{12}
+\FunctionTok{arrows}\NormalTok{(alphaCI, }\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\NormalTok{], alphaCI,}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\NormalTok{]}\SpecialCharTok{{-}}\NormalTok{aHt,}
+       \AttributeTok{code =} \DecValTok{1}\NormalTok{, }\AttributeTok{length =} \FloatTok{0.05}\NormalTok{, }\AttributeTok{xpd =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{col =} \StringTok{"blue3"}\NormalTok{, }\AttributeTok{lwd =} \FloatTok{1.5}\NormalTok{)}
+\FunctionTok{mtext}\NormalTok{(}\FunctionTok{expression}\NormalTok{(Instrinsic}\SpecialCharTok{\textasciitilde{}}\NormalTok{productivity}\SpecialCharTok{\textasciitilde{}}\NormalTok{(alpha)), }\DecValTok{1}\NormalTok{, }\AttributeTok{line =} \DecValTok{3}\NormalTok{, }\AttributeTok{cex =} \DecValTok{1}\NormalTok{)}
+\FunctionTok{text}\NormalTok{(}\AttributeTok{x =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\NormalTok{],}
+     \AttributeTok{y =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{4}\NormalTok{] }\SpecialCharTok{*} \FloatTok{1.05}\NormalTok{,}
+     \StringTok{"(b)"}\NormalTok{, }\AttributeTok{xpd=}\ConstantTok{NA}\NormalTok{)}
+
+\DocumentationTok{\#\# posterior for K}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mai =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.8}\NormalTok{,}\FloatTok{0.4}\NormalTok{,}\FloatTok{0.3}\NormalTok{,}\FloatTok{0.1}\NormalTok{))}
+\NormalTok{aa }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"alpha"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"alpha"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{] }
+\NormalTok{bb }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"beta"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"beta"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{] }
+\DocumentationTok{\#\# K in 1000s}
+\NormalTok{R\_b\_est }\OtherTok{\textless{}{-}}\NormalTok{ (aa}\DecValTok{{-}1}\NormalTok{) }\SpecialCharTok{/}\NormalTok{ bb }\SpecialCharTok{/} \DecValTok{1000}
+\NormalTok{R\_b\_est }\OtherTok{\textless{}{-}}\NormalTok{ R\_b\_est[R\_b\_est }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{]}
+\NormalTok{R\_b\_CI }\OtherTok{\textless{}{-}} \FunctionTok{quantile}\NormalTok{(R\_b\_est, CI\_vec)}
+\DocumentationTok{\#\# pile into last ban for plotting}
+\NormalTok{R\_b\_est[R\_b\_est }\SpecialCharTok{\textgreater{}} \DecValTok{13}\NormalTok{] }\OtherTok{\textless{}{-}} \DecValTok{13}
+\NormalTok{brks }\OtherTok{\textless{}{-}} \FunctionTok{seq}\NormalTok{(}\FunctionTok{around}\NormalTok{(}\FunctionTok{min}\NormalTok{(R\_b\_est), }\StringTok{"floor"}\NormalTok{),}
+            \FunctionTok{around}\NormalTok{(}\FunctionTok{max}\NormalTok{(R\_b\_est), }\StringTok{"ceiling"}\NormalTok{),}
+            \AttributeTok{length.out =} \FunctionTok{length}\NormalTok{(}\FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{, a\_thresh, }\DecValTok{2}\NormalTok{)))}
+\FunctionTok{hist}\NormalTok{(R\_b\_est, }\AttributeTok{freq =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{breaks =}\NormalTok{ brks, }\AttributeTok{col =}\NormalTok{ clr, }\AttributeTok{border =} \StringTok{"blue3"}\NormalTok{,}
+     \AttributeTok{xlab =} \StringTok{""}\NormalTok{, }\AttributeTok{xaxt =} \StringTok{"n"}\NormalTok{, }\AttributeTok{yaxt =} \StringTok{"n"}\NormalTok{,}
+     \AttributeTok{main =} \StringTok{""}\NormalTok{, }\AttributeTok{ylab =} \StringTok{""}\NormalTok{, }\AttributeTok{cex.lab =} \FloatTok{1.2}\NormalTok{)}
+\FunctionTok{axis}\NormalTok{(}\DecValTok{1}\NormalTok{, }\AttributeTok{at =} \FunctionTok{seq}\NormalTok{(}\FunctionTok{around}\NormalTok{(}\FunctionTok{min}\NormalTok{(R\_b\_est), }\StringTok{"floor"}\NormalTok{),}
+                 \FunctionTok{around}\NormalTok{(}\FunctionTok{max}\NormalTok{(R\_b\_est), }\StringTok{"ceiling"}\NormalTok{),}
+                 \DecValTok{2}\NormalTok{))}
+\NormalTok{aHt }\OtherTok{\textless{}{-}}\NormalTok{ (}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{4}\NormalTok{] }\SpecialCharTok{{-}} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\NormalTok{]) }\SpecialCharTok{/} \DecValTok{12}
+\FunctionTok{arrows}\NormalTok{(R\_b\_CI, }\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\NormalTok{], R\_b\_CI,}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\NormalTok{]}\SpecialCharTok{{-}}\NormalTok{aHt,}
+       \AttributeTok{code =} \DecValTok{1}\NormalTok{, }\AttributeTok{length =} \FloatTok{0.05}\NormalTok{, }\AttributeTok{xpd =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{col =} \StringTok{"blue3"}\NormalTok{, }\AttributeTok{lwd =} \FloatTok{1.5}\NormalTok{)}
+\FunctionTok{mtext}\NormalTok{(}\FunctionTok{expression}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Carrying capacity ("}\NormalTok{,}\FunctionTok{italic}\NormalTok{(K),}\StringTok{", "}\NormalTok{,}\DecValTok{10}\SpecialCharTok{\^{}}\DecValTok{3}\NormalTok{,}\StringTok{")"}\NormalTok{)),}
+      \AttributeTok{side =} \DecValTok{1}\NormalTok{, }\AttributeTok{line =} \DecValTok{3}\NormalTok{, }\AttributeTok{cex =} \DecValTok{1}\NormalTok{)}
+\FunctionTok{text}\NormalTok{(}\AttributeTok{x =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\NormalTok{], }
+     \AttributeTok{y =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{4}\NormalTok{] }\SpecialCharTok{*} \FloatTok{1.05}\NormalTok{,}
+     \StringTok{"(c)"}\NormalTok{, }\AttributeTok{xpd=}\ConstantTok{NA}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics{App_3_Summarize_results_forecast_step_ahead_fcst_files/figure-latex/fig_3_S-R-1} \end{center}
+
+Figure 2: Relationship between the number of spawning adults and their
+subsequent surviving offspring (recruits), assuming mean values for all
+covariates (a); and the estimated posterior distributions for the
+intrinsic productivity (b) and carrying capacity (c). Points in (a) are
+medians of the posterior estimates; error bars indicate the 95\%
+credible intervals. Blue points are for estimates with complete broods;
+purple points are for the most recent years with incomplete broods. Gray
+lines show the median relationship for each of the 41 years in the time
+series based on annual model estimates of productivity. Note that for
+plotting purposes only in (b) and (c), the density in the largest bin
+for each parameter contains counts for all values greater than or equal
+to it. Vertical arrows under the x-axes in (b) and (c) indicate the
+2.5\(^\text{th}\), 50\(^\text{th}\), and 97.5\(^\text{th}\) percentiles.
+
+Here are summaries of the posterior distributions for \(\alpha\) and
+\(K\).
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# intrinsic productivity}
+\FunctionTok{round}\NormalTok{(alphaCI, }\DecValTok{2}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  2.5%   50% 97.5% 
+##  2.20  7.63 32.12
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# carrying capacity}
+\FunctionTok{round}\NormalTok{(R\_b\_CI, }\DecValTok{2}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  2.5%   50% 97.5% 
+##  5.51  6.84  9.39
+\end{verbatim}
+
+\subsection{Covariate effects}\label{covariate-effects}
+
+Here are time series plots of the covariates (a-c) and histograms of
+their effects on productivity (d-f).
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{clr }\OtherTok{\textless{}{-}} \FunctionTok{rgb}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{255}\NormalTok{, }\AttributeTok{alpha =} \DecValTok{50}\NormalTok{, }\AttributeTok{maxColorValue =} \DecValTok{255}\NormalTok{)}
+\NormalTok{xoffSet }\OtherTok{\textless{}{-}} \FloatTok{0.04}
+\NormalTok{yoffSet }\OtherTok{\textless{}{-}} \FloatTok{0.03}
+
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mfrow=}\FunctionTok{c}\NormalTok{(n\_cov,}\DecValTok{2}\NormalTok{), }\AttributeTok{mai=}\FunctionTok{c}\NormalTok{(}\FloatTok{0.4}\NormalTok{,}\FloatTok{0.2}\NormalTok{,}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.1}\NormalTok{), }\AttributeTok{omi=}\FunctionTok{c}\NormalTok{(}\FloatTok{0.2}\NormalTok{,}\FloatTok{0.5}\NormalTok{,}\DecValTok{0}\NormalTok{,}\DecValTok{0}\NormalTok{))}
+
+\NormalTok{c\_est }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"gamma"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"gamma"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{] }
+
+\NormalTok{ylN }\OtherTok{\textless{}{-}} \FunctionTok{floor}\NormalTok{(}\FunctionTok{min}\NormalTok{(c\_est)}\SpecialCharTok{*}\DecValTok{10}\NormalTok{)}\SpecialCharTok{/}\DecValTok{10}
+\NormalTok{ylM }\OtherTok{\textless{}{-}} \FunctionTok{ceiling}\NormalTok{(}\FunctionTok{max}\NormalTok{(c\_est)}\SpecialCharTok{*}\DecValTok{10}\NormalTok{)}\SpecialCharTok{/}\DecValTok{10}
+\NormalTok{brks }\OtherTok{\textless{}{-}} \FunctionTok{seq}\NormalTok{(ylN,ylM,}\AttributeTok{length.out=}\FunctionTok{diff}\NormalTok{(}\FunctionTok{c}\NormalTok{(ylN,ylM))}\SpecialCharTok{*}\DecValTok{40}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}
+\NormalTok{t\_idx }\OtherTok{\textless{}{-}} \FunctionTok{seq}\NormalTok{(yr\_frst,}\AttributeTok{length.out=}\NormalTok{n\_yrs}\SpecialCharTok{{-}}\NormalTok{age\_min}\SpecialCharTok{+}\NormalTok{n\_fore)}
+\NormalTok{dat\_cvrs }\OtherTok{\textless{}{-}} \FunctionTok{as.matrix}\NormalTok{(dat\_cvrs[}\FunctionTok{seq}\NormalTok{(}\FunctionTok{length}\NormalTok{(t\_idx)),])}
+
+\ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\NormalTok{n\_cov) \{}
+  \ControlFlowTok{if}\NormalTok{(i}\SpecialCharTok{==}\DecValTok{4}\NormalTok{) \{}
+\NormalTok{    dat\_cvrs[,i}\SpecialCharTok{+}\DecValTok{1}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ dat\_cvrs[,i}\SpecialCharTok{+}\DecValTok{1}\NormalTok{]}\SpecialCharTok{/}\DecValTok{1000}
+\NormalTok{  \}}
+  \DocumentationTok{\#\# plot covar ts}
+  \FunctionTok{plot}\NormalTok{(dat\_cvrs[, }\StringTok{"year"}\NormalTok{], dat\_cvrs[, i}\SpecialCharTok{+}\DecValTok{1}\NormalTok{],}
+       \AttributeTok{pch =} \DecValTok{16}\NormalTok{, }\AttributeTok{col =} \StringTok{"blue3"}\NormalTok{, }\AttributeTok{type =} \StringTok{"o"}\NormalTok{,}
+       \AttributeTok{xlab =} \StringTok{""}\NormalTok{, }\AttributeTok{ylab =} \StringTok{""}\NormalTok{, }\AttributeTok{main =} \StringTok{""}\NormalTok{, }\AttributeTok{bty =} \StringTok{"L"}\NormalTok{,}
+       \AttributeTok{cex.axis =} \FloatTok{1.2}\NormalTok{)}
+  \FunctionTok{text}\NormalTok{(}\AttributeTok{x =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+} \FunctionTok{diff}\NormalTok{(}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{2}\NormalTok{]) }\SpecialCharTok{*}\NormalTok{ xoffSet,}
+       \AttributeTok{y =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{4}\NormalTok{] }\SpecialCharTok{{-}} \FunctionTok{diff}\NormalTok{(}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\SpecialCharTok{:}\DecValTok{4}\NormalTok{]) }\SpecialCharTok{*}\NormalTok{ yoffSet,}
+       \FunctionTok{paste0}\NormalTok{(}\StringTok{"("}\NormalTok{,letters[i],}\StringTok{")"}\NormalTok{),}
+       \AttributeTok{cex =} \FloatTok{1.2}\NormalTok{)}
+  \FunctionTok{mtext}\NormalTok{(}\AttributeTok{side =} \DecValTok{2}\NormalTok{, cov\_names[i], }\AttributeTok{line =} \DecValTok{3}\NormalTok{, }\AttributeTok{cex =} \FloatTok{1.2}\NormalTok{)}
+  \ControlFlowTok{if}\NormalTok{(i }\SpecialCharTok{==}\NormalTok{ n\_cov) \{}
+    \FunctionTok{mtext}\NormalTok{(}\AttributeTok{side =} \DecValTok{1}\NormalTok{, }\StringTok{"Brood year"}\NormalTok{, }\AttributeTok{line =} \DecValTok{3}\NormalTok{)}
+\NormalTok{  \}}
+  \DocumentationTok{\#\# plot covar effect}
+  \FunctionTok{hist}\NormalTok{(c\_est[,i],}
+       \AttributeTok{freq =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{breaks =}\NormalTok{ brks, }\AttributeTok{col =}\NormalTok{ clr, }\AttributeTok{border =}\StringTok{" blue3"}\NormalTok{,}
+       \AttributeTok{xlab =} \StringTok{""}\NormalTok{, }\AttributeTok{yaxt =} \StringTok{"n"}\NormalTok{, }\AttributeTok{main =} \StringTok{""}\NormalTok{, }\AttributeTok{ylab =} \StringTok{""}\NormalTok{, }\AttributeTok{cex.axis =} \FloatTok{1.2}\NormalTok{)}
+\NormalTok{  c\_CI }\OtherTok{\textless{}{-}} \FunctionTok{quantile}\NormalTok{(c\_est[,i],CI\_vec)}
+\NormalTok{  aHt }\OtherTok{\textless{}{-}}\NormalTok{ (}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{4}\NormalTok{]}\SpecialCharTok{{-}}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\NormalTok{])}\SpecialCharTok{/}\DecValTok{20}
+  \FunctionTok{arrows}\NormalTok{(c\_CI, }\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\NormalTok{]}\SpecialCharTok{{-}}\FloatTok{0.005}\NormalTok{, c\_CI, }\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\NormalTok{] }\SpecialCharTok{{-}}\NormalTok{ aHt,}
+         \AttributeTok{code =} \DecValTok{1}\NormalTok{,}\AttributeTok{length =} \FloatTok{0.05}\NormalTok{, }\AttributeTok{xpd =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{col =} \StringTok{"blue3"}\NormalTok{, }\AttributeTok{lwd =} \FloatTok{1.5}\NormalTok{)}
+  \FunctionTok{abline}\NormalTok{(}\AttributeTok{v =} \DecValTok{0}\NormalTok{, }\AttributeTok{lty =} \StringTok{"dashed"}\NormalTok{)}
+  \FunctionTok{text}\NormalTok{(}\AttributeTok{x =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+} \FunctionTok{diff}\NormalTok{(}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{2}\NormalTok{]) }\SpecialCharTok{*}\NormalTok{ xoffSet,}
+       \AttributeTok{y =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{4}\NormalTok{] }\SpecialCharTok{{-}} \FunctionTok{diff}\NormalTok{(}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\SpecialCharTok{:}\DecValTok{4}\NormalTok{]) }\SpecialCharTok{*}\NormalTok{ yoffSet,}
+       \FunctionTok{paste0}\NormalTok{(}\StringTok{"("}\NormalTok{,letters[i}\SpecialCharTok{+}\NormalTok{n\_cov],}\StringTok{")"}\NormalTok{),}
+       \AttributeTok{cex =} \FloatTok{1.2}\NormalTok{)}
+  \ControlFlowTok{if}\NormalTok{(i }\SpecialCharTok{==}\NormalTok{ n\_cov) \{ }\FunctionTok{mtext}\NormalTok{(}\AttributeTok{side =} \DecValTok{1}\NormalTok{,}\StringTok{"Effect size"}\NormalTok{, }\AttributeTok{line =} \DecValTok{3}\NormalTok{) \}}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{flushleft}\includegraphics{App_3_Summarize_results_forecast_step_ahead_fcst_files/figure-latex/fig_4_cov_effects-1} \end{flushleft}
+
+Figure 3: Time series of the environmental covariates used in the model
+(a-d), and their estimated effects on population productivity (e-g).
+Small arrows under histograms denote 2.5\(^\text{th}\),
+50\(^\text{th}\), and 97.5\(^\text{th}\) percentiles of the posterior
+distribution.
+
+Here is a summary of the covariate effect sizes
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{gamma\_CI }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(c\_est, }\DecValTok{2}\NormalTok{, quantile, }\FunctionTok{c}\NormalTok{(}\FloatTok{2.5}\NormalTok{, }\DecValTok{5}\NormalTok{, }\DecValTok{50}\NormalTok{, }\DecValTok{95}\NormalTok{, }\FloatTok{97.5}\NormalTok{)}\SpecialCharTok{/}\DecValTok{100}\NormalTok{)}
+\FunctionTok{t}\NormalTok{(}\FunctionTok{round}\NormalTok{(gamma\_CI, }\DecValTok{2}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##           2.5%    5%   50%   95% 97.5%
+## gamma[1] -0.19 -0.18 -0.10 -0.03 -0.02
+## gamma[2] -0.09 -0.08  0.00  0.08  0.10
+## gamma[3]  0.06  0.08  0.19  0.30  0.32
+\end{verbatim}
+
+\subsection{Recruitment residuals}\label{recruitment-residuals}
+
+Here is the time series of the residuals from the process model. They
+represent the population's productivity after accounting for the effects
+of density dependence and environmental covariates.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# time sequence}
+\NormalTok{t\_idx\_a }\OtherTok{\textless{}{-}} \FunctionTok{seq}\NormalTok{(yr\_frst, }\AttributeTok{length.out =}\NormalTok{ n\_yrs}\SpecialCharTok{{-}}\NormalTok{age\_min}\SpecialCharTok{+}\NormalTok{n\_fore)}
+\DocumentationTok{\#\# plot data}
+\NormalTok{p\_dat\_MA1\_AR1 }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"w"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}
+\NormalTok{p\_dat\_MA1\_AR1 }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(p\_dat\_MA1\_AR1, }\DecValTok{2}\NormalTok{, quantile, CI\_vec)}
+
+\NormalTok{p\_dat\_AR1 }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"res\_ln\_Rec"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}
+\NormalTok{p\_dat\_AR1 }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(p\_dat\_AR1, }\DecValTok{2}\NormalTok{, quantile, CI\_vec)}
+
+
+\NormalTok{yp\_min }\OtherTok{\textless{}{-}} \FunctionTok{min}\NormalTok{(p\_dat\_AR1)}
+\NormalTok{yp\_max }\OtherTok{\textless{}{-}} \FunctionTok{max}\NormalTok{(p\_dat\_AR1)}
+\DocumentationTok{\#\# plot}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mai =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.8}\NormalTok{,}\FloatTok{0.8}\NormalTok{,}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.1}\NormalTok{), }\AttributeTok{omi =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\FloatTok{0.2}\NormalTok{,}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.2}\NormalTok{))}
+\FunctionTok{plot}\NormalTok{(t\_idx\_a, p\_dat\_AR1[}\DecValTok{3}\NormalTok{,],}
+     \AttributeTok{type =} \StringTok{"n"}\NormalTok{,  }\AttributeTok{bty =} \StringTok{"L"}\NormalTok{,}
+     \AttributeTok{ylim =} \FunctionTok{c}\NormalTok{(yp\_min,yp\_max),}
+     \AttributeTok{xlab =} \StringTok{"Brood year"}\NormalTok{, }\AttributeTok{ylab =} \StringTok{"Process error"}\NormalTok{, }\AttributeTok{main =} \StringTok{""}\NormalTok{,}
+     \AttributeTok{cex.lab =} \FloatTok{1.2}\NormalTok{, }\AttributeTok{xaxt =} \StringTok{"n"}\NormalTok{)}
+\FunctionTok{abline}\NormalTok{(}\AttributeTok{h =} \DecValTok{0}\NormalTok{, }\AttributeTok{lty =} \StringTok{"dashed"}\NormalTok{)}
+\CommentTok{\#polygon(c(t\_idx\_a, rev(t\_idx\_a)), c(p\_dat[3,], rev(p\_dat[1,])),}
+\CommentTok{\#        col = clr, border = NA)}
+\FunctionTok{lines}\NormalTok{(t\_idx\_a, p\_dat\_AR1[}\DecValTok{2}\NormalTok{,], }\AttributeTok{col =} \StringTok{"blue3"}\NormalTok{, }\AttributeTok{lwd =} \DecValTok{2}\NormalTok{)}
+\FunctionTok{lines}\NormalTok{(t\_idx\_a, p\_dat\_MA1\_AR1[}\DecValTok{2}\NormalTok{,], }\AttributeTok{col =} \StringTok{"black"}\NormalTok{, }\AttributeTok{lwd =} \DecValTok{2}\NormalTok{)}
+\FunctionTok{axis}\NormalTok{(}\DecValTok{1}\NormalTok{, }\AttributeTok{at =} \FunctionTok{seq}\NormalTok{(}\DecValTok{1978}\NormalTok{,}\DecValTok{2018}\NormalTok{,}\DecValTok{1}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics{App_3_Summarize_results_forecast_step_ahead_fcst_files/figure-latex/fig_5_proc_err-1} \end{center}
+
+Figure 4: Time series of the median estimated recruitment residuals for
+the AR1 process model (blue line) and the AR1MA1 model (black line).
+
+\subsection{productivity}\label{productivity}
+
+Here is the time series of the population productivity in units of log
+of adult recruits per spawner.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# time sequence}
+\NormalTok{t\_idx\_a }\OtherTok{\textless{}{-}} \FunctionTok{seq}\NormalTok{(yr\_frst, }\AttributeTok{length.out =}\NormalTok{ n\_yrs}\SpecialCharTok{{-}}\NormalTok{age\_min}\SpecialCharTok{+}\NormalTok{n\_fore)}
+\DocumentationTok{\#\# plot data}
+\NormalTok{p\_dat\_MA1\_AR1 }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"ln\_RS"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}
+\NormalTok{p\_dat\_MA1\_AR1 }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(p\_dat\_MA1\_AR1, }\DecValTok{2}\NormalTok{, quantile, CI\_vec)}
+
+\NormalTok{p\_dat\_AR1 }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"ln\_RS"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}
+\NormalTok{p\_dat\_AR1 }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(p\_dat\_AR1, }\DecValTok{2}\NormalTok{, quantile, CI\_vec)}
+
+
+\NormalTok{yp\_min }\OtherTok{\textless{}{-}} \FunctionTok{min}\NormalTok{(p\_dat\_AR1)}
+\NormalTok{yp\_max }\OtherTok{\textless{}{-}} \FunctionTok{max}\NormalTok{(p\_dat\_AR1)}
+\DocumentationTok{\#\# plot}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mai =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.8}\NormalTok{,}\FloatTok{0.8}\NormalTok{,}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.1}\NormalTok{), }\AttributeTok{omi =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\FloatTok{0.2}\NormalTok{,}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.2}\NormalTok{))}
+\FunctionTok{plot}\NormalTok{(t\_idx\_a, p\_dat\_AR1[}\DecValTok{3}\NormalTok{,],}
+     \AttributeTok{type =} \StringTok{"n"}\NormalTok{,  }\AttributeTok{bty =} \StringTok{"L"}\NormalTok{,}
+     \AttributeTok{ylim =} \FunctionTok{c}\NormalTok{(yp\_min,yp\_max),}
+     \AttributeTok{xlab =} \StringTok{"Brood year"}\NormalTok{, }\AttributeTok{ylab =} \StringTok{"ln(R/S)"}\NormalTok{, }\AttributeTok{main =} \StringTok{""}\NormalTok{,}
+     \AttributeTok{cex.lab =} \FloatTok{1.2}\NormalTok{, }\AttributeTok{xaxt =} \StringTok{"n"}\NormalTok{)}
+\FunctionTok{abline}\NormalTok{(}\AttributeTok{h =} \DecValTok{0}\NormalTok{, }\AttributeTok{lty =} \StringTok{"dashed"}\NormalTok{)}
+\FunctionTok{polygon}\NormalTok{(}\FunctionTok{c}\NormalTok{(t\_idx\_a, }\FunctionTok{rev}\NormalTok{(t\_idx\_a)), }\FunctionTok{c}\NormalTok{(p\_dat\_MA1\_AR1[}\DecValTok{3}\NormalTok{,], }\FunctionTok{rev}\NormalTok{(p\_dat\_MA1\_AR1[}\DecValTok{1}\NormalTok{,])),}
+        \AttributeTok{col =}\NormalTok{ clr, }\AttributeTok{border =} \ConstantTok{NA}\NormalTok{)}
+\CommentTok{\#lines(t\_idx\_a, p\_dat\_AR1[2,], col = "blue3", lwd = 2)}
+\FunctionTok{lines}\NormalTok{(t\_idx\_a, p\_dat\_MA1\_AR1[}\DecValTok{2}\NormalTok{,], }\AttributeTok{col =} \StringTok{"blue3"}\NormalTok{, }\AttributeTok{lwd =} \DecValTok{2}\NormalTok{)}
+\FunctionTok{axis}\NormalTok{(}\DecValTok{1}\NormalTok{, }\AttributeTok{at =} \FunctionTok{seq}\NormalTok{(}\DecValTok{1978}\NormalTok{,}\DecValTok{2018}\NormalTok{,}\DecValTok{5}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics{App_3_Summarize_results_forecast_step_ahead_fcst_files/figure-latex/fig_6_prod-1} \end{center}
+
+Figure 5: Time series of population productivity
+
+\subsection{Management reference
+points}\label{management-reference-points}
+
+Here are a number of management reference points.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# abbreviations for ref points}
+\NormalTok{ref\_names }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"MSY"}\NormalTok{, }\StringTok{"Smsy"}\NormalTok{, }\StringTok{"Umsy"}\NormalTok{, }\StringTok{"Umax"}\NormalTok{)}
+\DocumentationTok{\#\# proportions of MSY to consider}
+\NormalTok{yld\_prop }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\FloatTok{0.75}\NormalTok{, }\FloatTok{0.85}\NormalTok{, }\FloatTok{0.95}\NormalTok{)}
+\DocumentationTok{\#\# median values for a \& b}
+\NormalTok{aa }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"E\_BH\_a"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"E\_BH\_a"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{] }
+
+\NormalTok{alpha }\OtherTok{\textless{}{-}} \FunctionTok{exp}\NormalTok{(aa)}
+\NormalTok{mcmc }\OtherTok{\textless{}{-}} \FunctionTok{length}\NormalTok{(aa)}
+
+\NormalTok{beta }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"beta"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"beta"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{] }
+
+\DocumentationTok{\#\# empty matrix for ref pts}
+\NormalTok{ref\_pts }\OtherTok{\textless{}{-}} \FunctionTok{matrix}\NormalTok{(}\ConstantTok{NA}\NormalTok{, mcmc, }\FunctionTok{length}\NormalTok{(ref\_names))}
+\FunctionTok{colnames}\NormalTok{(ref\_pts) }\OtherTok{\textless{}{-}}\NormalTok{ ref\_names}
+\DocumentationTok{\#\# spawner series for optimal yield profile}
+\NormalTok{SS }\OtherTok{\textless{}{-}} \FunctionTok{seq}\NormalTok{(}\DecValTok{100}\NormalTok{, }\FloatTok{1e4}\NormalTok{, }\DecValTok{100}\NormalTok{)}
+\DocumentationTok{\#\# empty matrix for optimal yield profiles}
+\NormalTok{OYP }\OtherTok{\textless{}{-}} \FunctionTok{matrix}\NormalTok{(}\DecValTok{0}\NormalTok{, }\FunctionTok{length}\NormalTok{(SS), }\FunctionTok{length}\NormalTok{(yld\_prop))}
+\ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\NormalTok{mcmc) \{}
+    \DocumentationTok{\#\# spawners at MSY}
+\NormalTok{    ref\_pts[i, }\StringTok{"Smsy"}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ (alpha[i] }\SpecialCharTok{/}\NormalTok{ beta[i]) }\SpecialCharTok{*} \FunctionTok{sqrt}\NormalTok{(}\DecValTok{1} \SpecialCharTok{/}\NormalTok{ alpha[i]) }\SpecialCharTok{{-}}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{/}\NormalTok{ beta[i])}
+    \DocumentationTok{\#\# MSY}
+\NormalTok{    ref\_pts[i, }\StringTok{"MSY"}\NormalTok{] }\OtherTok{\textless{}{-}}\NormalTok{ (ref\_pts[i,}\StringTok{"Smsy"}\NormalTok{] }\SpecialCharTok{*}\NormalTok{ alpha[i]) }\SpecialCharTok{/}
+\NormalTok{                            (}\DecValTok{1} \SpecialCharTok{+}\NormalTok{ beta[i] }\SpecialCharTok{*}\NormalTok{ ref\_pts[i, }\StringTok{"Smsy"}\NormalTok{]) }\SpecialCharTok{{-}}\NormalTok{ ref\_pts[i, }\StringTok{"Smsy"}\NormalTok{]}
+    \DocumentationTok{\#\# harvest rate at MSY}
+\NormalTok{    ref\_pts[i, }\StringTok{"Umsy"}\NormalTok{] }\OtherTok{\textless{}{-}} \DecValTok{1} \SpecialCharTok{{-}} \FunctionTok{sqrt}\NormalTok{(}\DecValTok{1} \SpecialCharTok{/}\NormalTok{ alpha[i])}
+    \DocumentationTok{\#\# max harvest rate}
+\NormalTok{    ref\_pts[i, }\StringTok{"Umax"}\NormalTok{] }\OtherTok{\textless{}{-}} \DecValTok{1} \SpecialCharTok{{-}} \DecValTok{1}\SpecialCharTok{/}\NormalTok{alpha[i]}
+    \DocumentationTok{\#\# yield over varying S}
+\NormalTok{    yield }\OtherTok{\textless{}{-}}\NormalTok{ ((SS }\SpecialCharTok{*}\NormalTok{ alpha[i]) }\SpecialCharTok{/}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{+}\NormalTok{ beta[i] }\SpecialCharTok{*}\NormalTok{ SS)) }\SpecialCharTok{{-}}\NormalTok{ SS}
+    \ControlFlowTok{for}\NormalTok{(j }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\FunctionTok{length}\NormalTok{(yld\_prop)) \{}
+\NormalTok{        OYP[,j] }\OtherTok{\textless{}{-}}\NormalTok{ OYP[,j] }\SpecialCharTok{+} \DecValTok{1}\SpecialCharTok{*}\NormalTok{(yield }\SpecialCharTok{\textgreater{}}\NormalTok{ yld\_prop[j] }\SpecialCharTok{*}\NormalTok{ ref\_pts[i, }\StringTok{"MSY"}\NormalTok{])}
+\NormalTok{    \}}
+\NormalTok{\}}
+\NormalTok{OYP }\OtherTok{\textless{}{-}}\NormalTok{ OYP}\SpecialCharTok{/}\NormalTok{mcmc}
+
+\DocumentationTok{\#\# Prob of overfishing}
+\NormalTok{hh }\OtherTok{\textless{}{-}} \FunctionTok{seq}\NormalTok{(}\DecValTok{100}\NormalTok{)}
+\NormalTok{Pr\_over }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(hh,hh,hh)}
+\FunctionTok{colnames}\NormalTok{(Pr\_over) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"Umsy75"}\NormalTok{,}\StringTok{"Umsy"}\NormalTok{,}\StringTok{"Umax"}\NormalTok{)}
+\ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in}\NormalTok{ hh) \{}
+\NormalTok{  Pr\_over[i,}\StringTok{"Umsy75"}\NormalTok{] }\OtherTok{\textless{}{-}} \FunctionTok{sum}\NormalTok{(ref\_pts[,}\StringTok{"Umsy"}\NormalTok{] }\SpecialCharTok{*} \FloatTok{0.75} \SpecialCharTok{\textless{}}\NormalTok{ i}\SpecialCharTok{/}\DecValTok{100}\NormalTok{)}\SpecialCharTok{/}\NormalTok{mcmc}
+\NormalTok{  Pr\_over[i,}\StringTok{"Umsy"}\NormalTok{] }\OtherTok{\textless{}{-}} \FunctionTok{sum}\NormalTok{(ref\_pts[,}\StringTok{"Umsy"}\NormalTok{] }\SpecialCharTok{\textless{}}\NormalTok{ i}\SpecialCharTok{/}\DecValTok{100}\NormalTok{)}\SpecialCharTok{/}\NormalTok{mcmc}
+\NormalTok{  Pr\_over[i,}\StringTok{"Umax"}\NormalTok{] }\OtherTok{\textless{}{-}} \FunctionTok{sum}\NormalTok{(ref\_pts[,}\StringTok{"Umax"}\NormalTok{] }\SpecialCharTok{\textless{}}\NormalTok{ i}\SpecialCharTok{/}\DecValTok{100}\NormalTok{)}\SpecialCharTok{/}\NormalTok{mcmc}
+\NormalTok{\}}
+
+\DocumentationTok{\#\# posterior exploitation rate \& spawner abundance}
+
+\NormalTok{aer }\OtherTok{\textless{}{-}}\NormalTok{ Sp\_ts }\OtherTok{\textless{}{-}}\NormalTok{ mod\_res\_MA1\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_MA1\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ mod\_res\_AR1[,}\FunctionTok{grep}\NormalTok{(}\StringTok{"Sp"}\NormalTok{, }\FunctionTok{colnames}\NormalTok{(mod\_res\_AR1))]}\SpecialCharTok{*}\NormalTok{model\_weights[}\DecValTok{2}\NormalTok{] }
+\NormalTok{aer }\OtherTok{\textless{}{-}}\NormalTok{ aer[,}\DecValTok{1}\SpecialCharTok{:}\NormalTok{n\_yrs]}
+\ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\NormalTok{n\_yrs) \{}
+\NormalTok{    aer[,i] }\OtherTok{\textless{}{-}}\NormalTok{ dat\_harv[i] }\SpecialCharTok{/}\NormalTok{ (dat\_harv[i] }\SpecialCharTok{+}\NormalTok{ Sp\_ts[,i]) }
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{layout}\NormalTok{(}\FunctionTok{matrix}\NormalTok{(}\FunctionTok{c}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{4}\NormalTok{, }\DecValTok{3}\NormalTok{), }\DecValTok{2}\NormalTok{, }\DecValTok{2}\NormalTok{), }\AttributeTok{heights =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{5}\NormalTok{))}
+\NormalTok{yoffSet }\OtherTok{\textless{}{-}} \FloatTok{0.10}
+\NormalTok{yoffSet }\OtherTok{\textless{}{-}} \FloatTok{0.05}
+
+\DocumentationTok{\#\# (a) Optimal yield profile}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mai=}\FunctionTok{c}\NormalTok{(}\FloatTok{0.9}\NormalTok{, }\FloatTok{0.9}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{), }\AttributeTok{omi=}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }\FloatTok{0.1}\NormalTok{))}
+\NormalTok{x\_lp }\OtherTok{\textless{}{-}}\NormalTok{ yld\_prop}
+\ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\FunctionTok{length}\NormalTok{(x\_lp)) \{}
+\NormalTok{    x\_lp[i] }\OtherTok{\textless{}{-}}\NormalTok{ SS[}\FunctionTok{max}\NormalTok{(}\FunctionTok{which}\NormalTok{(OYP[,i] }\SpecialCharTok{==} \FunctionTok{max}\NormalTok{(OYP[,i])}
+                            \SpecialCharTok{|} \FunctionTok{abs}\NormalTok{(OYP[,i] }\SpecialCharTok{{-}}\NormalTok{ (yld\_prop[i]}\SpecialCharTok{{-}}\FloatTok{0.3}\NormalTok{)) }\SpecialCharTok{\textless{}=} \FloatTok{0.05}\NormalTok{))]}
+\NormalTok{\}}
+\FunctionTok{matplot}\NormalTok{(SS, OYP, }\AttributeTok{type=}\StringTok{"l"}\NormalTok{, }\AttributeTok{lty=}\StringTok{"solid"}\NormalTok{,  }\AttributeTok{ylim=}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{),}
+        \AttributeTok{col=}\FunctionTok{c}\NormalTok{(}\StringTok{"slateblue"}\NormalTok{,}\StringTok{"blue"}\NormalTok{,}\StringTok{"darkblue"}\NormalTok{), }\AttributeTok{lwd=}\DecValTok{2}\NormalTok{,}
+        \AttributeTok{xlab =} \StringTok{"Spawners"}\NormalTok{, }\AttributeTok{ylab =} \StringTok{"Probability of X\% of MSY"}\NormalTok{, }\AttributeTok{main =} \StringTok{""}\NormalTok{,}
+        \AttributeTok{las=}\DecValTok{1}\NormalTok{, }\AttributeTok{cex.lab=}\FloatTok{1.2}\NormalTok{)}
+\FunctionTok{points}\NormalTok{(}\AttributeTok{x =}\NormalTok{ x\_lp, }\AttributeTok{y =}\NormalTok{ yld\_prop}\FloatTok{{-}0.3}\NormalTok{,}
+       \AttributeTok{pch =} \DecValTok{21}\NormalTok{, }\AttributeTok{cex =} \FloatTok{3.5}\NormalTok{,}
+       \AttributeTok{col =} \StringTok{"white"}\NormalTok{, }\AttributeTok{bg =} \StringTok{"white"}\NormalTok{)}
+\FunctionTok{text}\NormalTok{(}\AttributeTok{x =}\NormalTok{ x\_lp, }\AttributeTok{y =}\NormalTok{ yld\_prop}\FloatTok{{-}0.3}\NormalTok{, }\FunctionTok{paste0}\NormalTok{(yld\_prop}\SpecialCharTok{*}\DecValTok{100}\NormalTok{, }\StringTok{"\%"}\NormalTok{),}
+     \AttributeTok{col=}\FunctionTok{c}\NormalTok{(}\StringTok{"slateblue"}\NormalTok{,}\StringTok{"blue"}\NormalTok{,}\StringTok{"darkblue"}\NormalTok{), }\AttributeTok{cex=}\FloatTok{0.7}\NormalTok{)}
+\FunctionTok{text}\NormalTok{(}\AttributeTok{x =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ xoffSet }\SpecialCharTok{*} \FunctionTok{diff}\NormalTok{(}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{2}\NormalTok{]),}
+     \AttributeTok{y =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{4}\NormalTok{] }\SpecialCharTok{{-}}\NormalTok{ yoffSet }\SpecialCharTok{*} \FunctionTok{diff}\NormalTok{(}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\SpecialCharTok{:}\DecValTok{4}\NormalTok{]),}
+     \StringTok{"(a)"}\NormalTok{)}
+\DocumentationTok{\#\# marginal histogram of posterior spawner abundances}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mai=}\FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\FloatTok{0.9}\NormalTok{, }\FloatTok{0.05}\NormalTok{, }\DecValTok{0}\NormalTok{))}
+\FunctionTok{hist}\NormalTok{(Sp\_ts[Sp\_ts}\SpecialCharTok{\textless{}}\FloatTok{1e4}\NormalTok{], }\AttributeTok{breaks =} \DecValTok{40}\NormalTok{,}
+     \AttributeTok{col =}\NormalTok{ clr, }\AttributeTok{border =} \StringTok{"blue3"}\NormalTok{, }
+     \AttributeTok{yaxs =} \StringTok{"i"}\NormalTok{, }\AttributeTok{xaxt =} \StringTok{"n"}\NormalTok{, }\AttributeTok{yaxt =} \StringTok{"n"}\NormalTok{,}
+     \AttributeTok{main =} \StringTok{""}\NormalTok{, }\AttributeTok{ylab =} \StringTok{""}\NormalTok{)}
+
+\DocumentationTok{\#\# (b) Probability of overfishing}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mai=}\FunctionTok{c}\NormalTok{(}\FloatTok{0.9}\NormalTok{, }\FloatTok{0.9}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{))}
+\FunctionTok{matplot}\NormalTok{(Pr\_over, }\AttributeTok{type =} \StringTok{"l"}\NormalTok{, }\AttributeTok{lwd =} \DecValTok{2}\NormalTok{, }\AttributeTok{lty =} \StringTok{"solid"}\NormalTok{,}
+        \AttributeTok{col =} \FunctionTok{c}\NormalTok{(}\StringTok{"slateblue"}\NormalTok{,}\StringTok{"blue"}\NormalTok{,}\StringTok{"darkblue"}\NormalTok{), }
+        \AttributeTok{ylab=}\StringTok{"Probability of overfishing"}\NormalTok{, }
+        \AttributeTok{xlab=}\StringTok{"Harvest rate"}\NormalTok{, }\AttributeTok{xaxt=}\StringTok{"n"}\NormalTok{,}
+        \AttributeTok{las =} \DecValTok{1}\NormalTok{, }\AttributeTok{cex.lab =} \FloatTok{1.2}\NormalTok{)}
+\FunctionTok{axis}\NormalTok{(}\DecValTok{1}\NormalTok{, }\FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{100}\NormalTok{,}\DecValTok{20}\NormalTok{), }\FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{100}\NormalTok{,}\DecValTok{20}\NormalTok{)}\SpecialCharTok{/}\DecValTok{100}\NormalTok{)}
+\NormalTok{x\_lp }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{)}
+\ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\FunctionTok{length}\NormalTok{(x\_lp)) \{}
+\NormalTok{  x\_lp[i] }\OtherTok{\textless{}{-}} \FunctionTok{max}\NormalTok{(}\FunctionTok{which}\NormalTok{(}\FunctionTok{abs}\NormalTok{(Pr\_over[,i] }\SpecialCharTok{{-}} \FloatTok{0.5}\NormalTok{) }\SpecialCharTok{\textless{}=} \FloatTok{0.05}\NormalTok{))}
+\NormalTok{\}}
+\FunctionTok{points}\NormalTok{(}\AttributeTok{x =}\NormalTok{ x\_lp, }\AttributeTok{y =} \FunctionTok{rep}\NormalTok{(}\FloatTok{0.5}\NormalTok{, }\DecValTok{3}\NormalTok{), }\AttributeTok{pch =} \DecValTok{21}\NormalTok{, }\AttributeTok{cex =} \DecValTok{4}\NormalTok{,}
+       \AttributeTok{col =} \StringTok{"white"}\NormalTok{, }\AttributeTok{bg =} \StringTok{"white"}\NormalTok{)}
+\FunctionTok{text}\NormalTok{(}\AttributeTok{x =}\NormalTok{ x\_lp, }\AttributeTok{y =} \FloatTok{0.5}\NormalTok{, }\FunctionTok{expression}\NormalTok{(U[M75], U[MSY], U[Max]),}
+     \AttributeTok{col =} \FunctionTok{c}\NormalTok{(}\StringTok{"slateblue"}\NormalTok{, }\StringTok{"blue"}\NormalTok{, }\StringTok{"darkblue"}\NormalTok{), }\AttributeTok{cex =} \FloatTok{0.8}\NormalTok{)}
+\FunctionTok{text}\NormalTok{(}\AttributeTok{x =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\NormalTok{] }\SpecialCharTok{+}\NormalTok{ xoffSet }\SpecialCharTok{*} \FunctionTok{diff}\NormalTok{(}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{2}\NormalTok{]),}
+     \AttributeTok{y =} \FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{4}\NormalTok{] }\SpecialCharTok{{-}}\NormalTok{ yoffSet }\SpecialCharTok{*} \FunctionTok{diff}\NormalTok{(}\FunctionTok{par}\NormalTok{()}\SpecialCharTok{$}\NormalTok{usr[}\DecValTok{3}\SpecialCharTok{:}\DecValTok{4}\NormalTok{]),}
+     \StringTok{"(b)"}\NormalTok{)}
+\DocumentationTok{\#\# marginal histogram of posterior harvest rates}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mai =} \FunctionTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{ ,}\FloatTok{0.9}\NormalTok{, }\FloatTok{0.05}\NormalTok{, }\DecValTok{0}\NormalTok{))}
+\FunctionTok{hist}\NormalTok{(aer, }\AttributeTok{breaks =} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{40}\NormalTok{)}\SpecialCharTok{/}\DecValTok{40}\NormalTok{,}
+     \AttributeTok{col =}\NormalTok{ clr, }\AttributeTok{border =} \StringTok{"blue3"}\NormalTok{,}
+     \AttributeTok{yaxs =} \StringTok{"i"}\NormalTok{, }\AttributeTok{xaxt =} \StringTok{"n"}\NormalTok{, }\AttributeTok{yaxt =} \StringTok{"n"}\NormalTok{,}
+     \AttributeTok{main =} \StringTok{""}\NormalTok{, }\AttributeTok{ylab =} \StringTok{""}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{flushleft}\includegraphics{App_3_Summarize_results_forecast_step_ahead_fcst_files/figure-latex/fig_7_ref_pts-1} \end{flushleft}
+
+Figure 6: Plots of (a) the probability that a given number of spawners
+produces average yields achieving 95\%, 85\%, or 75\% of the estimated
+maximum sustainable yield (MSY); and (b) the cumulative probability of
+overfishing the population, based on harvest rates equal to those at
+75\% of MSY, at MSY, and at the maximum per recruit. The histograms
+above (a) and (b) are distributions of the posterior estimates for the
+number of spawners and harvest rates, respectively; the histogram in (a)
+has been truncated at \(10^4\).
+
+\end{document}

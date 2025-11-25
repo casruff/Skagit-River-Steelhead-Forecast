@@ -1,6 +1,6 @@
 ---
 title: R2. Model fitting and evaluation 
-subtitle: 2023 - 2024 Skagit River steelhead forecast.
+subtitle: 2025 - 2026 Skagit River steelhead forecast.
 output:
   pdf_document:
     toc: yes
@@ -513,7 +513,7 @@ We begin by supplying values for the following parameters, which we need for mod
 ```{r get_user_inputs}
 ## first & last years of fish data
 yr_frst <- 1978
-yr_last <- 2024
+yr_last <- 2025
 
 ## min & max adult age classes
 age_min <- 3
@@ -529,10 +529,10 @@ n_fore <- 1
 n_forecasts <- 10
 
 ## first year of 1 step ahead forecast
-yr_begin <- 2015
+yr_begin <- 2016
 
 ## last year of 1 step ahead forecast
-yr_end <- 2024
+yr_end <- 2025
 
 ## upper threshold for Gelman & Rubin's potential scale reduction factor (Rhat).
 Rhat_thresh <- 1.1
@@ -665,7 +665,7 @@ processFile(file.path(jagsdir, "IPM_BH_cov_AR_resid.txt"))
 ***
 
 # Fitting the models and generating the one year ahead forecasts
-For the most recent 10 years (2015 - 2024), fit the model to data through year t-1 and generate a forecast for year t. 
+For the most recent 10 years (2016 - 2025), fit the model to data through year t-1 and generate a forecast for year t. 
 
 Before fitting the model in JAGS, we need to specify the MCMC control parameters.
 
@@ -871,13 +871,13 @@ model_selection$delta_LOOIC<-tbl_LOOIC$delta_LOOIC
 model_selection$LOOIC_weight<-round(tbl_LOOIC$LOOIC_weight,4)
 ```
 
-# Model Averaging and 2024 - 2025 forecast
-Here is weighted average forecast for 2023 - 2024 based on the model LFOIC weights. We
-also compare predictions for return years 2014 - 2023 generated from each of the
+# Model Averaging and 2025 - 2026 forecast
+Here is weighted average forecast for 2025 - 2026 based on the model LFOIC weights. We
+also compare predictions for return years 2016 - 2025 generated from each of the
 six models evaluated including an ensemble (weighted) to observed run size.
 
 ```{r }
-## extract median 2024 forecast from each model
+## extract median 2026 forecast from each model
 f_dat<-data.frame(
   sort(unlist(mod_fits[[1]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
   sort(unlist(mod_fits[[2]][,paste0("Sp","[",n_yrs+n_fore,"]")])),
@@ -888,7 +888,7 @@ f_dat<-data.frame(
 )
 colnames(f_dat)<-models
 
-model_selection[,"2025_forecast"] <- apply(f_dat,2,median)
+model_selection[,"2026_forecast"] <- apply(f_dat,2,median)
 
 weighted_forecast_dist <-(
   as.matrix(f_dat) %*% (as.vector(model_selection[,"LFOIC_weight"]))
@@ -927,7 +927,7 @@ legend("topright",legend=c(models,"Observed","Ensemble"),lty=c(rep(1,length(mode
 
 #density plot for final forecasts and ensemble
 res<-apply(f_dat,2,function(x) density(x))
-plot(x=1,y=1,ylim=c(0,0.001),xlim=c(0,10000),ylab="density",xlab="2023 - 2024 Runsize")
+plot(x=1,y=1,ylim=c(0,0.001),xlim=c(0,10000),ylab="density",xlab="2025 - 2026 Runsize")
 lapply(res,function(x) lines(x$y~x$x))
 lines(density(weighted_forecast_dist)$y~density(weighted_forecast_dist)$x,lwd=4,col="red")
 legend("topright",legend=c(models,"Ensemble"),lwd=c(rep(1,length(models)),4),col=c(rep("black",length(models)),"red"),bty="n")

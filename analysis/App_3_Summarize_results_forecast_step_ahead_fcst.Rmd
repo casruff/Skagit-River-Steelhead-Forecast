@@ -1,6 +1,6 @@
 ---
 title: Appendix S3. Compute model averaged parameter estimates via LOOIC()
-subtitle: 2024 - 2025 Skagit River steelhead forecast.
+subtitle: 2025 - 2026 Skagit River steelhead forecast.
 output:
   pdf_document:
     highlight: haddock
@@ -23,7 +23,7 @@ This is version `r paste0('0.',format(Sys.time(), '%y.%m.%d'))`.
 
 # Background
 
-This appendix shows how generate model averaged parameter estimates and generate figures relevant to the 2024-2025 wild Skagit River steelhead forecast. All analyses require the [R software](https://cran.r-project.org/) (v3.5 or later), as well as a few packages that are not included with the base installation of R.
+This appendix shows how generate model averaged parameter estimates and generate figures relevant to the 2025-2026 wild Skagit River steelhead forecast. All analyses require the [R software](https://cran.r-project.org/) (v3.5 or later), as well as a few packages that are not included with the base installation of R.
 
 ```{r load_pkgs, message = FALSE, warning = FALSE}
 if(!require("readr")) {
@@ -79,7 +79,7 @@ around <- function(x, func = "round", prec = 1) {
 ```{r get_user_inputs, echo=FALSE}
 ## first & last years of fish data
 yr_frst <- 1978
-yr_last <- 2024
+yr_last <- 2025
 ## years of data
 dat_yrs <- seq(yr_frst, yr_last)
 ## number of years of data
@@ -172,15 +172,15 @@ for(i in 1:n_mods) {
 model_weights <- loo_model_weights(LOOIC, method = "pseudobma",optim_method = "BFGS", optim_control = list(), BB = TRUE)
 
 
-## extract median 2024 forecast from each model
+## extract median 2026 forecast from each model
 p_dat_AR1MA1 <- mod_res_MA1_AR1[,grep("Sp", colnames(mod_res_MA1_AR1))]
  
 p_dat_AR1MA1 <- apply(p_dat_AR1MA1, 2, quantile, CI_vec)
-p_dat_AR1MA1_2024 <- round(quantile(p_dat_AR1MA1[,n_yrs+n_fore],probs = CI_vec))
+p_dat_AR1MA1_2025 <- round(quantile(p_dat_AR1MA1[,n_yrs+n_fore],probs = CI_vec))
 
 
 p_dat_AR1 <- mod_res_AR1[,grep("Sp", colnames(mod_res_AR1))]
-p_dat_AR1_2024 <- round(quantile(p_dat_AR1[,n_yrs+n_fore],probs = CI_vec))
+p_dat_AR1_2025 <- round(quantile(p_dat_AR1[,n_yrs+n_fore],probs = CI_vec))
 
 
 ## LOOIC for all data
@@ -189,7 +189,7 @@ rownames(tbl_LOOIC) <- sub("model", "", rownames(tbl_LOOIC))
 tbl_LOOIC <- tbl_LOOIC[order(as.numeric(rownames(tbl_LOOIC))), ]
 tbl_LOOIC <- cbind(model = c("B-H","B-H"),
                    error = c("MA1_AR1","AR1"),
-                   as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights),forecast = c(p_dat_AR1MA1_2024[2],p_dat_AR1_2024[2]))
+                   as.data.frame(tbl_LOOIC),pseudo_bma_weight = as.matrix(model_weights),forecast = c(p_dat_AR1MA1_2025[2],p_dat_AR1_2025[2]))
 tbl_LOOIC <- tbl_LOOIC[order(tbl_LOOIC[,"looic"]), ]
 write.csv(tbl_LOOIC,file.path(savedir,"model_selection_results.csv"))
 
@@ -230,19 +230,6 @@ cnt <- cnt + 1
 ```
 
 `r fig_cap(cnt, caption = "Time series of the estimated total population size (catch plus the adults that escaped to spawn). The observed data are the points; the solid line is the median estimate and the shaded region indicates the 95% credible interval.", display = "full")`
-
-
-## 2024 terminal run size forecast
-
-Here are several percentiles for the 2024 forecast for the total run size (i.e., catch + escapement).
-
-```{r forecast_2024}
-p_dat <- mod_res_MA1_AR1[,grep("Sp", colnames(mod_res_MA1_AR1))]*model_weights[1] + mod_res_AR1[,grep("Sp", colnames(mod_res_AR1))]*model_weights[2]
-
-data.frame(forecast=round(quantile(p_dat[,n_yrs+n_fore],
-                                   probs=c(0.025,0.25,0.5,0.75,0.975))))
-
-```
 
 
 ## Spawner-recruit relationship
@@ -390,7 +377,7 @@ round(R_b_CI, 2)
 
 Here are time series plots of the covariates (a-c) and histograms of their effects on productivity (d-f).
 
-```{r fig_4_cov_effects, fig.width=8, fig.height=10, fig.pos="placeHere", warnings=FALSE, messages=FALSE, fig.align="center"}
+```{r fig_4_cov_effects, fig.width=8, fig.height=10, fig.pos="placeHere", warnings=FALSE, messages=FALSE, fig.align="left"}
 clr <- rgb(0, 0, 255, alpha = 50, maxColorValue = 255)
 xoffSet <- 0.04
 yoffSet <- 0.03
@@ -594,7 +581,7 @@ for(i in 1:n_yrs) {
 ```
 
 
-```{r fig_7_ref_pts, fig.width=8, fig.height=4, warning=FALSE, fig.pos = "placeHere", fig.align="center"}
+```{r fig_7_ref_pts, fig.width=8, fig.height=4, warning=FALSE, fig.pos = "placeHere", fig.align="left"}
 layout(matrix(c(2, 1, 4, 3), 2, 2), heights = c(1, 5))
 yoffSet <- 0.10
 yoffSet <- 0.05
